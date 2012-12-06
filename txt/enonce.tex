@@ -1,0 +1,499 @@
+\documentclass{article}
+\usepackage[pdftex,a4paper]{geometry}
+\usepackage{graphicx}
+\usepackage{times}
+\usepackage[francais]{babel}
+\geometry{top=0.8cm,bottom=0.8cm,left=1cm,right=1cm}
+\pagestyle{empty}
+\begin{document}
+
+\begin{center}
+\Large\textbf{
+Projet de Syst\`emes d'Exploitation 2012}
+\end{center}
+
+\section{Pr\'esentation}
+
+Le but de ce projet est la mise en \oe uvre d'un simulateur (l\'eger) des
+composantes mat\'erielles principales d'un ordinateur usuel fonctionnant sous
+un syst\`eme d'exploitation multit\^ache, en mettant l'accent sur l'unit\'e
+centrale et sur une impl\'ementation dans le noyau de la communication et
+synchronisation entre processus.
+Ce simulateur offre des \'el\'ements de programmation
+machine (assembleur fictif simplifi\'e, gestion d'interruptions) et des 
+\'el\'ements de programmation syst\`eme (gestion de plusieurs processus,
+m\'emoire partag\'ee et s\'emaphores).
+
+Le noyau est le processus (sim) de PID 0, et offre aux processus des services
+sous la forme de plusieurs interruptions~: \'elire le processus suivant qui est
+pr\^et (\texttt{int1}, tr\`es simple round robin), terminer le processus en cours
+(\texttt{int2} -- un peu comme \texttt{exit()}), op\'eration sur les
+s\'emaphores (\texttt{int4}), entr\'ees-sorties "console" (\texttt{int5} et
+\texttt{int6}) ; l'interruption \texttt{int3} est r\'eserv\'ee pour
+l'ordonnanceur.
+
+Tous les processus sont charg\'es au d\'ebut (il n'y a pas de shell) et
+ex\'ecut\'es un par un pas \`a pas jusqu'\`a leur fin our jusqu'\`a des
+requ\^etes d'op\'eration de s\'emaphores bloquantes. Chaque
+processus dispose de sa propre tranche de m\'emoire vive (sim) "virtuelle"
+de longueur fixe, y compris le noyau (qui peut \'egalement acc\'eder aux
+tranches des processus.
+
+De surcro\^\i t, il y a une autre tranche de m\'emoire -- partag\'ee entre
+tous les processus.
+
+Pour chaque type de m\'emoire il y a des instructions assembleur
+sp\'ecifiques, pour simplifier leur manipulation (e.g. \texttt{LDMEM},
+\texttt{LDSHM}, etc.) 
+
+Le cadre de programmation, d\'ecrit plus bas, vous est fourni en \'etat de marche
+et vous devez l'enrichir. Des classes repr\'esentent chaque \'el\'ement
+d\'ecrit plus haut~; la m\'emoire vive est log\'ee en entier dans un seul
+fichier, avec des offset pour chaque tranche~; les textes des programmes (sim)
+(des processus) sont des simple strings, g\'er\'es par des classes
+d\'edi\'ees, la m\'emoire \'etant uniquement pour les donn\'ees, pour
+simplifier le tout.  
+
+Ce cadre permet donc d\'ej\`a tel qu'il est la compilation et son ex\'ecution,
+pour comprendre son fonctionnement et tester les fonctionnalit\'es d\'ej\`a
+fournies, \`a l'aide d'exemples inclus. 
+
+
+\`A la fin de ce document une section d\'etaille votre travail \`a
+faire.
+
+\section{Tester un peu}
+
+\begin{itemize}
+\item d\'esarchivez et compilez (\texttt{make nom=System}, qui contient le \texttt{main()})
+\item lancez le tout (\texttt{System.run}) et regardez l'\'ecran, et/ou
+  gardez-en une copie dans un fichier \'egalement (par exemple avec
+  \texttt{tee}, ou simplement en dirigeant la sortie dans le fichier --
+  n'oubliez pas de r\'ecup\'erer la sortie erreur standard \'egalement).
+\item le tout doit finir, avec un dump de la m\'emoire 
+\end{itemize}
+
+\section{D\'eroulement d\'etaill\'e pas-\`a-pas}
+
+Au d\'emarrage du simulateur, apr\`es construction des objets et chargement du
+code de tous les programmes (noyau et processus normaux), c'est le noyau qui est
+d\'emarr\'e (\texttt{Proc\_0\_Program.asm}). Celui-ci
+\begin{itemize}
+\item arrange sa m\'emoire, en y mettant 
+\begin{itemize}
+ \item vecteur d'interruptions (cod\'e en dur dans le texte du programme, \$prep), 
+ \item tables \'etats processus (remplies avec \texttt{readytorun}),
+ \item vecteur avec adresses de d\'ebut des vecteurs de requ\^etes de semop
+   par processus
+\end{itemize}
+\item se branche sur \texttt{int1}
+\begin{itemize}
+ \item cherche le premier processus P en \'etat \texttt{readytorun}
+\item change son \'etat en \texttt{running} dans la table
+\item se branche sur le code de P (passant en mode utilisateur) et commence
+  ainsi son ex\'ecution (instruction \texttt{LDPSW} qui charge le PSW --
+  Program Status Word -- l'\'etat de l'unit\'e centrale (les registres, etc.)
+  correspondant au processus P)
+\end{itemize}
+\end{itemize}
+
+Lorsque le processus P en cours fait une requ\^ete noyau (donc appelle une
+interruption, avec l'instruction \texttt{CLINT})~:
+
+\begin{itemize}
+\item l'\'etat de l'unit\'e centrale est sauvegard\'e automatiquement
+  (i.e. le PSW)
+\item le pid de P est not\'e dans la m\'emoire vive du noyau
+\item on se branche \`a nouveau sur le code du noyau, dans l'interruption en
+  question (et en mode
+  ma\^\i tre), qui, dans la plupart des cas
+\begin{itemize}
+\item pr\'epare les param\'etres de la requ\^ete 
+\item l'effectue
+\item se branche \'eventuellement sur \texttt{int1} pour essayer de trouver un
+  autre   processus \`a ex\'ecuter 
+\end{itemize}
+\end{itemize}
+
+\section{Structure}
+
+La partie programmation s'appuie sur plusieurs classes qui vous sont fournies.
+
+Les fichiers \texttt{Board.h} et \texttt{Board.cxx} contiennent les classes
+qui repr\'esentent la m\'emoire vive (Memory) et un prototype d'unit\'e
+centrale (BaseCPU) avec ses registres (g\'en\'eraux, sp\'eciali\'es,
+etc.). Ces fichiers sont en \'etat d'utilisation tels quels et n'ont pas
+n\'ecessairement besoin d'apport pour ce projet. 
+
+Les fichiers \texttt{CPU.h} et \texttt{CPU.cxx} repr\'esentent l'unit\'e
+centrale de notre syst\`eme. Nous ne simulons pas la notion de bus avec une
+classe s\'epar\'ee~: la classe BaseCPU "poss\`ede" \'egalement l'objet
+repr\'esentant la m\'emoire vive. 
+
+\section{M\'emoire}
+
+La m\'emoire vive du simulateur est impl\'ement\'ee \`a l'aide d'un seul
+fichier Unix normal, et donc permet \'egalement un acc\`es concurrent si
+besoin est, \`a l'aide m\^eme de plusieurs processus (vrais -- Unix). Le code
+qui vous est fourni n'en a toutefois qu'un seul. 
+
+Chaque processus du simulateur dispose d'une tranche de $1000$ entiers (donc
+$1000 *$\texttt{sizeof(int)} octets), qu'il voit de $0$ a $999$ (m\'emoire
+"virtuelle"). Ces tranches sont en fait simplement log\'ees une apr\`es
+l'autre dans le grand fichier unique (adresses en mots -- taille d'un \texttt{int}):
+
+{\small
+\begin{verbatim}
+AddrFic  AddrProc   MemProc      Utilisation
+-----------------Debut du fichier-------------------
+
+   0       0       0 (noyau)     <speciale>
+   10     10       0                ...
+   ....   ....     0
+   990   990       0 
+
+- - - - - - - - - - - - fin tranche - - - - - - - - -
+
+  1000     0       1         <mini-zone-u-dot>      
+  1010    10       1         
+   ....   ....     1                ...
+  1200   200       1    <debut zone disponible>
+   ....   ....     1                ...
+  1990   990       1 <start pile (croit vers debut)>
+
+- - - - - - - - - - - - fin tranche - - - - - - - - -
+
+  2000     0       2         <mini-zone-u-dot>      
+  1010    10       2          <detail +bas>
+  1020    20       2                ...
+   ....   ....     2
+  1200   200       2    <zone disponible>
+   ....   ....     2                ...
+  1990   990       2 <start pile (croit vers debut)>
+
+- - - - - - - - - - - - fin tranche - - - - - - - - -
+       ...         ...       ...
+- - - - - - - - - - - - fin tranche - - - - - - - - -
+   Memoire Partagee (visible par tous les processus)
+-----------------Fin du fichier-------------------
+\end{verbatim}}
+
+Donc la tranche du processus simulateur $p$ commence dans le fichier m\'emoire
+\`a l'offset r\'eel en octets $p*1000*$\texttt{sizeof(int)}.
+
+Ces constantes (parmi d'autres similaries) sont d\'efinies au d\'ebut du fichier \texttt{CPU.h}: 
+
+\begin{verbatim}
+#define MEMORYSIZEPERPROCESS 1000 
+#define KERNELSAVECURRENTPROCID 0
+#define KERNELPID               0 
+#define PROCPSWFRAMESTART       0
+\end{verbatim}
+
+\section{L'unit\'e centrale}
+
+\begin{itemize}
+\item a un jeu de registres \`a usage g\'en\'eral (les \texttt{Rn})
+\item a des registres sp\'ecialis\'es~: le mode (user ou master), le pointeur
+  de pile, le compteur ordinal (program counter), le compteur de processus
+  (process counter), le drapeau d'interruptions, et les registres d'entr\'ee
+  pour les communications.
+\begin{verbatim}
+class BaseCPU {
+protected:
+    InstructionParser iPrs;
+    StackPointer     spReg; 
+    ProgramCounter   pcReg;
+    ProcessCounter   prReg; 
+    RunMode          mdReg;  // user or master
+    RegisterSet      genReg;
+    Register         inReg0,inReg1; // for interCPU communication (e.g. CPU<->DMA) 
+    MemoryTable      mem;
+    Memory           sharedMem;
+    ProcessTable     proc;
+    string           cpuId;
+    ostream         &logStream;
+    ostream         &consoleOutputStream;
+    istream         &consoleInputStream;
+    ConsoleInOut     consoleInOut;
+    bool             qRun;
+    bool             qInterruptible;
+public:
+    BaseCPU(const string &id, ostream  &log, const int nGenReg, const int nProc);
+    virtual void dumpReg(ostream &os, bool qRegAsWell = false);
+    virtual void execute(const Instruction &) throw(nsSysteme::CExc);
+    virtual void run() throw(nsSysteme::CExc);
+    virtual void interrupt(const int, bool) throw(nsSysteme::CExc);
+    virtual void pendingIntIfAny() throw(nsSysteme::CExc);
+};
+\end{verbatim}
+\item la boucle principale d'ex\'ecution se trouve dans la m\'ethode
+  \texttt{run()}
+\begin{verbatim}
+void BaseCPU::run() throw(CExc) {
+    for(iTick = uTick = 0; qRun && iTick < 10000; uTick += (mdReg . getVal() != 1),iTick++) {
+      execute(pcReg . fetch(proc[prReg . getVal()] . programText));
+      if(qInterruptible) { pendingIntIfAny(); }
+    }
+    logStream << "CPU " << cpuId << " is now fully stopped, total " << iTick << " instructions overall.\n";
+}
+\end{verbatim}
+\item sait ex\'ecuter les instructions qui sont d\'ecrites en d\'etail dans \texttt{Board.h} 
+
+\begin{verbatim}
+enum InstructionType {
+
+NOPER=0,
+DMPRG, // ex: DMPRG              ; dump content of all registers to logstream
+MSTRM, // ex: MSTRM              ; MD <- MasterMode
+USERM, // ex: USERM              ; MD <- UserMode
+NINTR, // ex: NINTR              ; disable interrupts
+INTRP, // ex: INTRP              ; enable interrupts
+SETRI, // ex: SETRI R2 254       ; R2 <- 254
+SETRG, // ex: SETRG R2 R3        ; R2 <- R3
+SETPR, // ex: SETPR R10          ; PR <- R10 (only in mastermode)
+CPPRG, // ex: CPPRG R2           ; R2 <- PR  
+ADDRG, // ex: ADDRG R2 R3 R4     ; R2 <- R3 + R4  
+SUBRG, // ex: SUBRG R2 R3 R4     ; R2 <- R3 - R4  
+PSHRG, // ex: PSHRG R5 R4        ; mem[(SP - R5) * sizeof(int)] <- R4
+POPRG, // ex: POPRG R5 R7        ; R7 <- mem[(SP + R5) * sizeof(int)];
+JMABS, // ex: JMABS R1           ; PC <- R1 
+JMPTO, // ex: JMPTO R1           ; PC <- PC + R1 
+JZERO, // ex: JZERO R12 R5       ; if(R12 == 0) { PC <- PC + R5 }
+JNZRO, // ex: JNZRO R12 R5       ; if(R12 != 0) { PC <- PC + R5 }
+JMBSI, // ex: JMBSI 23           ; PC <- 23 
+JMTOI, // ex: JMTOI 24           ; PC <- PC + 24 
+JZROI, // ex: JZROI R12 25       ; if(R12 == 0) { PC <- PC + 25 }
+JNZRI, // ex: JNZRI R12 26       ; if(R12 != 0) { PC <- PC + 26 }
+LDMEM, // ex: LDMEM R8 R21       ; R21     <- mem[R8] (for current proc memory space)
+STMEM, // ex: STMEM R8 R21       ; mem[R8] <- R21  (for current proc memory space)
+LDSHM, // ex: LDSHM R8 R21       ; R21     <- sharedMem[R8] (for all procs shared memory space)
+STSHM, // ex: STSHM R8 R21       ; sharedMem[R8] <- R21  (for all procs shared memory space)
+LDPSW, // ex: LDPSW R3           ; <SP,PR,PC,MD,R0,R1,...> <- memOfProc[R3][PROCPSWFRAMESTART]
+SPSWR, // ex: SPSWR R3 R2 R4     ; memOfProc[R3][PROCPSWFRAMESTART+offset4.R2] <- R4 (master only)
+LDPRM, // ex: LDPRM R3 R8 R21    ; R21     <- memOfProc[R3][R8] (master only)
+STPRM, // ex: STPRM R3 R8 R21    ; memOfProc[R3][R8] <- R21 (master only)
+WKCPU, // ex: WKCPU R3 R5 R6     ; CPU[R3].I0 <- R5 ; CPU[R3].I1 <- R6 ;  signal CPU[R3]
+GETI0, // ex: GETI0 R5           ; R5 <- I0 (the only way to read I0 (after a WKCPU))
+GETI1, // ex: GETI1 R5           ; R5 <- I1 (the only way to read I1 (after a WKCPU))
+CLLSB, // ex: CLLSB R7 R5        ; SP <- SP - R7; mem[SP * sizeof(int)] <- PC; PC <- R5
+RETSB, // ex: RETSB R6           ; PC <- mem[SP * sizeof(int)] ; SP <- SP + R6
+CLINT, // ex: CLINT R7           ; PC <- IntVec[R7] (saves the PSW except for the kernel)
+SPECP, // ex: SPECP R2 R3 R10 R4 ; special instruction given by R2 with (at most) three args(R3,..)
+SCRASH,// ex: SCRASH             ; crash down the system (master only) -- major inconsistency 
+SDOWN};// ex: SDOWN              ; shut down system (master only)
+\end{verbatim}
+\item g\`ere des interruptions avec la m\'ethode \texttt{CPU$::$interrupt()}~:
+  une interruption peut donc soit "survenir" (cause externe -- ici ce sera
+  principalement l'"alarme" du scheduler), soit
+  \^etre appel\'ee par un processus utilisateur (instruction \texttt{CLINT}),
+  pour demander un service (sortie console (interruption 5), terminaison de
+  programme (interruption 2), etc.).
+\item sauvegarde son mot d'\'etat du programme (PSW -- Program Status Word) --
+  voir m\'ethode \texttt{CPU$::$interrupt()} dans \texttt{CPU.cxx}.
+\end{itemize}
+
+\section{Remarques}
+
+\begin{itemize}
+\item les instructions ne manipulent pas des registres
+sp\'eciaux par leur nom (i.e. en tant qu'arguments), mais certaines instructions
+modifient tout de m\^eme directement les valeurs de ces registres sp\'eciaux,
+comme \texttt{SETPR} (en mode ma\^\i tre). 
+\item les instructions machine reconnues par la CPU travaillent beaucoup
+uniquement  avec des registres et peu avec des
+valeur num\'erique (on les appelle des instructions "imm\'ediates": 
+\texttt{SETRI}, \texttt{JNZRI}, etc.). 
+\item puisqu'on ne
+se concentre pas sur des calculs approfondis, les instructions
+arithm\'etiques sont tr\`es peu nombreuses (additions, soustractions).
+\item toutes les valeurs d'addressage dans la m\'emoire vive (au niveau langage
+machine de ce projet) repr\'esentent des entiers (des "word"). Par contre,
+au niveau impl\'ementation (donc par exemple dans la classe \texttt{Memory}), les
+adresses d\'esignent des octets. Dans la m\'ethode \texttt{CPU$::$execute()}
+on prend soin de multiplier par \texttt{wordSize} -- la taille d'un entier
+-- les valeurs qu'on r\'ecup\`ere des registres avant d'appeler les
+m\'ethodes de la classe  \texttt{Memory} pour l'acc\`es effectif. 
+\item pour les sauts
+(\texttt{JNZRO}, etc.), le \texttt{PC} pointe d\'ej\`a \`a l'instruction qui
+suit le saut, donc ceci est \`a prendre en compte lors du calcul du nombre
+d'instructions \`a sauter lors de sauts relatifs. 
+\item pour les appels de
+proc\'edure on dispose de \texttt{CLLSB} et \texttt{RETSB} dont le premier
+argument donne la taille de la zone de param\`etres (avec l'adresse-programme
+de retour) sur la pile. Pour empiler/r\'ecup\'erer des arguments, on a
+\texttt{PSHRG} et \texttt{POPRG}.
+\item le code des programmes qui sont en cours d'ex\'ecution (i.e. les
+processus) est stock\'e ailleurs que les donn\'ees -- la classe
+\texttt{Memory} sert uniquement pour les donn\'ees.
+\item le code ("machine") des programmes est en fait stock\'e sous forme de
+cha\^\i nes de caract\`eres (ceci aide \'egalement la lisibilit\'e)
+\item le registre \texttt{PC} (program counter) est un indice dans ce tableau
+de cha\^\i nes
+\item Un Proc\_0 plus lisible se trouve dans le sous-r\'epertoire \texttt{ini}
+  -- mais ce programme ne repr\'esente pas ce que la machine virtuelle
+  voit. Pour des programmes en assembleur/code machine un peu plus larges il
+  est plus facile de travailler de mani\`ere symbolique, au moins pour les
+  branchements, et donc le programme du  sous-r\'epertoire \texttt{ini} est
+  celui-ci, d'un peu plus "haut niveau". Pour le transformer en "vrai code
+  machine" pour notre machine virtuelle il faut utiliser le script Perl
+  \texttt{preProcAsm.pl} (en tant que filtre, donc par exemple ainsi
+\begin{verbatim}
+    cat ini/Proc_0_Program.asm | ./preProcAsm.pl > Proc_0_Program.asm
+\end{verbatim}
+  
+\end{itemize}
+
+\section{Travail \`a faire}
+
+\begin{enumerate}
+\item \'Etude g\'en\'erale -- cherchez sur le web et dans des livres des
+  renseignements sur les points suivants et r\'edigez
+  \textbf{individuellement} ensuite un rapport d'environ
+  quatre pages, \textit{\`a rendre pour le 18 novembre 2012, 23h59 heure de Paris}~:
+\begin{enumerate}
+ \item sch\'ema de base de gestion d'un seul processus dans le noyau
+\item sch\'ema de base du noyau (ordonnanceur, gestion m\'emoire
+  (virtuelle), communication entre processus, pilotes de mat\'eriel (device
+  drivers), etc.)
+\item concr\`etement -- d\'efinissez les notions suivantes, et expliquez-en le
+  but, les co\^uts, les particularit\'es, leur place dans le cadre du
+  syst\`eme d'exploitation, etc.~:
+\begin{enumerate}
+\item registres de l'unit\'e centrale (CPU) et m\'emoire RAM
+\item changement de contexte
+\item interruption, appel syst\`eme
+\item mode utilisateur et mode ma\^\i tre
+\item  espace m\'emoire d'un processus
+\item m\'emoire partag\'ee et exclusion mutuelle
+\end{enumerate}
+\item si/comment les concepts ci-avant sont-ils disponibles en C (ou C++) dans
+  les syst\`emes de type Unix, comme Linux, etc. ?
+\end{enumerate}
+\item Compr\'ehension du code fourni (l'impl\'ementation des instructions
+  machine est dans \texttt{CPU$::$execute()}) -- travail en \'equipe, \`a
+  rendre ensemble avec le code (voir point suivant), pour le 23 d\'ecembre
+  2012, 23h59 heure de Paris~:
+\begin{enumerate}
+\item Quelle est la diff\'erence entre \texttt{STMEM} et \texttt{STPRM}~?
+  Pourquoi vaut-il mieux permettre la seconde instruction uniquement en mode
+  ma\^\i tre~? 
+  Pourquoi suffit-il pour le noyau de faire \texttt{LDPSW} d'un processus P
+  pour "se brancher sur le code de P"~?
+\item D\'etaillez pas \`a pas ce que fait \texttt{int2} (comme est d\'ecrit le
+  d\'eroulement de chacune des trois autres dans ce document). 
+\item D\'etaillez la structure de la tranche de m\'emoire de chaque processus
+  (regardez la m\'ethode \texttt{CPU$::$interrupt()} et l'instruction
+  \texttt{LDPSW}, ainsi que le code noyau de \texttt{int3},
+  et enfin les instructions manipulant \texttt{spReg} ainsi que
+  \texttt{Memory$::$setUp()}) 
+\item \`A quoi sert la ligne 168 de \texttt{Proc\_0\_Program.asm}~?
+\item D\'etaillez la structure de la tranche de m\'emoire du noyau (regardez
+  son code dans \texttt{Proc\_0\_Program.asm} et la ligne 
+\begin{verbatim}
+mem[KERNELPID] . storeAt(KERNELSAVECURRENTPROCID, prReg . getVal());
+\end{verbatim}
+de \texttt{CPU$::$interrupt()}).
+\item Quelles sont les limitations (nombre de processus, nombre de
+  s\'emaphores, de semop()s, etc.) pr\'esentes dans ce projet, telles qu'elles
+  sont impos\'ees par la structure de la m\'emoire et par les valeurs de ces
+  constantes d\'efinies dans le code.
+\end{enumerate}
+\item Construction code  -- travail en \'equipe, \`a
+  rendre ensemble avec le code (voir point pr\'ec\'edent), pour le 23 d\'ecembre
+  2012, 23h59 heure de Paris~:
+\begin{enumerate}
+\item Observez que l'interruption 5 en fait ne peut pas afficher plus d'un
+  nombre ou un caract\`ere -- elle n'est pas "vectoris\'ee" -- elle ignore la
+  valeur du registre \texttt{R2}, lequel est pourtant cens\'e \^etre un de ses
+  param\`etre. La premi\`ere
+  t\^ache consiste donc \`a r\'e\'ecrire cette interruption \texttt{int5} pour
+  qu'elle soit vectoris\'ee, donc qu'elle prenne bien en compte \texttt{R2}
+  \'egalement -- vous devez donc rajouter une boucle, etc.
+\item \'Ecrire l'interruption \texttt{int6} qui permet de lire depuis le
+  clavier des nombres ou des caract\`eres, donc de mani\`ere compl\'ementaire
+  \`a ce que fait l'interruption \texttt{int5}.
+\item \'Elargir les programmes \texttt{Proc\_1\_Program.asm} et
+  \texttt{Proc\_2\_Program.asm} (qui forment un couple
+  producteur-consommateur) pour faire \'ecrire les nombres
+  de 1 a 10 en m\'emoire partag\'ee depuis l'addresse 11 \'a l'adresse 20, et
+  les faire lire, mais en \'ecrivant un nombre \`a la fois dans la zone critique et en rel\^achant
+  donc les s\'emaphores. (n'oubliez pas que vous avez plusieurs s\'emaphores
+  \`a votre disposition)
+\item \'Etendre l'infrastructure de ce syst\`eme (en \'ecrivant du
+  C++ et aussi en am\'eliorant ensuite \texttt{Proc\_0\_Program.asm}) 
+\begin{itemize}
+\item  rajouter la possibilit\'e d'avoir des nombres
+  al\'eatoires, avec une lecture memory-mapped dans le noyau, similaire aux
+  entr\'ees-sorties console (bien entendu, utilisnt une autre adresse), 
+\item augmenter le
+  scheduleur pour le randomiser ensuite, 
+\item rajouter une gestion CPU multi-core
+\item \dots
+\end{itemize}
+\end{enumerate}
+\end{enumerate}
+\end{document}
+\textbf{\'Ech\'eances~:} Partie~1 Compr\'ehension -- le 30 novembre
+minuit. Partie~2 Construction -- points (a) et (b) -- le 10 d\'ecembre
+minuit. Le tout (rapport final complet, i.e. reprenant tout votre travail
+(parties 1 et 2 compl\`etes), code source, etc.) -- le 22 d\'ecembre minuit.
+ 
+
+
+
+\subsection{Zone m\'emoire d'un processus de pid $p$}
+
+Les $200$ premiers mots de la tranche m\'emoire pour un un processus de pid
+$p$ normal (donc plus grand ou \'egal \`a $1$) sont utilis\'es pour
+sauvegarder l'\'etat de l'unit\'e centrale (PSW) lors d'un changement de
+contexte. Le \textit{PSW} est le Program Status Word, c'est-\`a-dire la
+totalit\'e du contenu des registres CPU~: le pointeur de pile (SP), le
+compteur ordinal (PC), les registres g\'en\'eraux (R0, R1, ...), etc. Dans
+notre simulateur cette sauvegarde a lieu "automagiquement" lors du
+d\'eclenchement d'une interruption~:
+
+\begin{verbatim}
+AddrFic  AddrProc   MemProc      Utilisation
+
+- - - - - - - - - - tranche processus p - - - - - - - - -
+
+p*1000        0       1    SP PC MD R0 R1 R2 R3 R4 R5 R6     
+p*1000+10    10       1    R7 R8 R9 ....    
+p*1000+20    20       1                
+   ....      ...      1             ....
+p*1000+150   150      1    1  <dsk> <mem> <lgth> ...
+   ....      ...      1             ....
+p*1000+200   200      1    <debut zone disponible>
+   ....      ....     1                ...
+p*1000+990   990      1 <start pile (croit vers debut)>
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\end{verbatim}
+
+\`A l'adresse $150$ on stocke des renseignements d\'edi\'es \`a l'op\'eration
+entr\'ee-sortie courante, lors de son initiation (explication plus bas dans la
+section Disque et DMA).
+
+\subsection{Zone m\'emoire du noyau}
+
+Le noyau ne sauvegarde pas son PSW, et utilise le d\'ebut de sa tranche
+m\'emoire autrement. Le tout premier entier contient le pid du processus qui
+\'etait en train de s'ex\'ecuter juste avant, et ensuite on loge le "vecteur
+d'interruptions". 
+
+
+(donc quatre entiers repr\'esentants les points d'entr\'ee
+dans le noyau -- les lignes (donc valeurs de \texttt{PC}) ou commence le code
+de chacune des interruptions, ensuite la table des processus (i.e. leurs
+\'etats) et ensuite la table des fichiers (i.e. leur pointeur courant).
+
+\begin{verbatim}
+Kernel Memory Section
+---------------------
+0       <crtPID>     2          31        39      62 0 0 0 0 0 
+10      0            0          0         0       0  0 0 0 0 0 
+20      <procCnt> pid1State  pid2State  pid3State  ...
+...
+200     0         fd1Pointer fd2Pointer fd3Pointer ...
+\end{verbatim}

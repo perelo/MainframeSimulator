@@ -1,0 +1,14 @@
+#/**
+#*
+#* @File : INCLUDE_H // fichier des macros pour le makefile
+#*
+#*
+#**/
+INCLUDE = ../include
+#
+#
+CEXC_H       = $(INCLUDE)/CExc.h  
+NSSYSTEME_H  = $(INCLUDE)/nsSysteme.h        $(CEXC_H) 
+#
+PROJET_H         = $(INCLUDE)/Board.h $(INCLUDE)/CPU.h $(INCLUDE)/DMA.h $(INCLUDE)/Disk.h $(INCLUDE)/System.h
+#
