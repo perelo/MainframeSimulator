@@ -4,7 +4,7 @@
  *
  *
  * @Synopsis : definition des wrappers non inline des fonctions syst,
- *		   definition des fonctions shell	
+ *                   definition des fonctions shell        
  *
 **/
 
@@ -85,13 +85,13 @@ sighandler_t nsSysteme::Signal (int NumSig,
 
 void nsFctShell::FileCopy (const char * const Destination,
                        const char * const Source, const size_t NbBytes, 
-		       const bool         syn /*= false*/)
+                       const bool         syn /*= false*/)
                                              throw (nsSysteme::CExc)
 {
     const int fdSource = nsSysteme::Open (Source, O_RDONLY);
     const int fdDest   = nsSysteme::Open (Destination, 
                                O_CREAT | O_TRUNC | O_WRONLY
-			       | (syn ? O_SYNC : 0),
+                               | (syn ? O_SYNC : 0),
                                0700);
 
 
@@ -125,36 +125,36 @@ void nsFctShell::Destroy (const char * const File)  throw (nsSysteme::CExc){
  
   
 void nsFctShell::DerouterSignaux(sighandler_t Traitant) throw(nsSysteme::CExc) {
- 	
+         
       struct sigaction Action,OldAction;
       nsSysteme::TabSigHandlers TabAncTraitant; //
-	
-    	Action.sa_flags   = 0;
-    	Action.sa_handler = Traitant;
-    	::sigemptyset (& Action.sa_mask);
+        
+            Action.sa_flags   = 0;
+            Action.sa_handler = Traitant;
+            ::sigemptyset (& Action.sa_mask);
 
-    	for (int i =1 ; i<nsSysteme::CstSigMax; ++i ){
-        	if ((SIGKILL != i)&& (SIGSTOP != i) && (SIGCONT!=i)) {
+            for (int i =1 ; i<nsSysteme::CstSigMax; ++i ){
+                if ((SIGKILL != i)&& (SIGSTOP != i) && (SIGCONT!=i)) {
 
-       		try { 
-				nsSysteme::Sigaction (i, & Action, &OldAction); 
-			}
+                       try { 
+                                nsSysteme::Sigaction (i, & Action, &OldAction); 
+                        }
 
-        		catch (const nsSysteme::CExc & ) {  
-            		// Si sigaction est interrompue par 
-	    			// l'arrivee des signaux errno == EINTR 
-            		// il faut essayer de derouter a nouveau le signal
-	    			if (EINTR==errno) {
-					cout << "ressaye " << i << "\n";
-            				continue;
-				}
-	    			else 	throw;
+                        catch (const nsSysteme::CExc & ) {  
+                            // Si sigaction est interrompue par 
+                                    // l'arrivee des signaux errno == EINTR 
+                            // il faut essayer de derouter a nouveau le signal
+                                    if (EINTR==errno) {
+                                        cout << "ressaye " << i << "\n";
+                                            continue;
+                                }
+                                    else         throw;
     
-        		}
-		}
-		TabAncTraitant[i] = OldAction;
+                        }
+                }
+                TabAncTraitant[i] = OldAction;
 
-	}
+        }
 
 }//DerouterSignaux
 

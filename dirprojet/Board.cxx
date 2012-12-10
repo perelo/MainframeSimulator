@@ -57,11 +57,11 @@ Instruction ProgramCounter::fetch(ProgramText &progText) {
     int qImmediate(0);
     InstructionType iT(instrParse . getInstrTypeFromString(instrWord,&qImmediate));
     Instruction instr(progText[value],
-		      iT,
-		      instrParse . getRegIdFromString(regOne),
-		      instrParse . getRegIdFromString(regTwo),
-		      instrParse . getRegIdFromString(regThree),
-		      regOne,regTwo,qImmediate);
+                      iT,
+                      instrParse . getRegIdFromString(regOne),
+                      instrParse . getRegIdFromString(regTwo),
+                      instrParse . getRegIdFromString(regThree),
+                      regOne,regTwo,qImmediate);
     value += 1;
     return(instr);
 }
@@ -76,7 +76,7 @@ void Process::loadProc(const string &fileName, const string &pName) throw(CExc){
     }
     for(string oneLine; getline(progFile,oneLine);) {
       if(!(oneLine . size()) || oneLine[0] == '#')  {
-	continue; // ignore comment-only lines as well as empty lines
+        continue; // ignore comment-only lines as well as empty lines
       }
       programText . push_back(oneLine);
     }
@@ -102,10 +102,10 @@ void Memory::setUp(int fD, int mS, int ofs)  {
 
 int Memory::loadFrom(int addr) throw (CExc) {
     if(addr > memSize) {
-	throw CExc("Memory::loadFrom()"," address too large.");
+        throw CExc("Memory::loadFrom()"," address too large.");
     }
     if(addr < 0) {
-	throw CExc("Memory::loadFrom()"," negative address.");
+        throw CExc("Memory::loadFrom()"," negative address.");
     }
     int val;
     Lseek(fileDescr, offset + addr, SEEK_SET);
@@ -115,10 +115,10 @@ int Memory::loadFrom(int addr) throw (CExc) {
 
 void Memory::storeAt(int addr, int val) throw (CExc) {
     if(addr > memSize) {
-	throw CExc("Memory::storeAt()"," address too large.");
+        throw CExc("Memory::storeAt()"," address too large.");
     }
     if(addr < 0) {
-	throw CExc("Memory::storeAt()"," negative address.");
+        throw CExc("Memory::storeAt()"," negative address.");
     }
     Lseek(fileDescr, offset + addr, SEEK_SET);
     Write(fileDescr,&val,sizeof(val));
@@ -132,20 +132,20 @@ void Memory::dumpAll(ostream &os) {
     int kLine(-1);
     os << "0\t";
     for(int kAddr(0); kAddr < memSizeWord; kAddr++) {
-	os << memVal[kAddr] << " ";
-	if(++kLine >= 9 && kAddr < memSizeWord - 1) {
-	    os << "\n" << ((kAddr + 1) / 10) * 10 << "\t";
-	    kLine = -1;
-	}
+        os << memVal[kAddr] << " ";
+        if(++kLine >= 9 && kAddr < memSizeWord - 1) {
+            os << "\n" << ((kAddr + 1) / 10) * 10 << "\t";
+            kLine = -1;
+        }
     }
 }
 
 Instruction::Instruction(const string    &iStr, 
-			 InstructionType iT, 
-			 int o1, int o2, int o3,
-			 const string   &str1,
-			 const string   &str2,
-			 int             qImm) :
+                         InstructionType iT, 
+                         int o1, int o2, int o3,
+                         const string   &str1,
+                         const string   &str2,
+                         int             qImm) :
     instrStr(iStr),iType(iT), op1(o1), op2(o2), op3(o3), iArg1(str1), iArg2(str2), qImmediate(qImm) {
     if(qImmediate) {
       numVal = atoi((qImmediate == 1 ? iArg1 :  iArg2) . c_str());
@@ -201,10 +201,10 @@ InstructionParser::InstructionParser() {
 InstructionType InstructionParser::getInstrTypeFromString(const string &iStr, int *pqImm) throw(CExc) {
     const map<string,InstructionType>::iterator pInstr(instructDict . find(iStr));
     if(pInstr == instructDict . end()) {
-	throw CExc("InstructionParser::getInstrTypeFromString("+iStr+",...)","Invalid instruction");
+        throw CExc("InstructionParser::getInstrTypeFromString("+iStr+",...)","Invalid instruction");
     }
     if(pqImm == 0) {
-	throw CExc("InstructionParser::getInstrTypeFromString("+iStr+",...)"," null pointer, please debug.\n");
+        throw CExc("InstructionParser::getInstrTypeFromString("+iStr+",...)"," null pointer, please debug.\n");
     }
     const map<InstructionType,int>::const_iterator pImm(qInstructHasImmediateArg . find(pInstr -> second));
     *pqImm = (pImm != qInstructHasImmediateArg . end() ? pImm -> second : 0);
@@ -213,14 +213,14 @@ InstructionType InstructionParser::getInstrTypeFromString(const string &iStr, in
 
 int InstructionParser::getRegIdFromString(const string &rStr) throw(CExc) {
     if(rStr . size() > 1 && rStr[0] == 'R') {
-	return(atoi(rStr . substr(1) . c_str()));
+        return(atoi(rStr . substr(1) . c_str()));
     }
     return(-1);
 }
 
 void ConsoleInOut::input(istream &s,
-			 Memory  &mem,
-			 int      startAddr) { 
+                         Memory  &mem,
+                         int      startAddr) { 
     const int wordSize(sizeof(int));
 // @startAddr   : just the operation code
 // @startAddr+1 : the # of items to read
@@ -231,24 +231,24 @@ void ConsoleInOut::input(istream &s,
     const int formatAddrStart(mem . loadFrom((startAddr + 3) * wordSize));
     cerr << "ConsoleInput for " << nItems << " items:\n";
     for(int kItem(0); kItem < nItems; kItem++) {
-	const int itemFormat (mem . loadFrom((formatAddrStart + kItem) * wordSize));
-	if(itemFormat == 0) { // int value
-	    int a; s >> a; mem . storeAt((destAddrStart + kItem) * wordSize, a);
-	}
-	else if(itemFormat == 1) { // char value
-	    char a; s >> a; mem . storeAt((destAddrStart + kItem) * wordSize, static_cast<int>(a));
-	}
-	else {
-	    cerr << "ConsoleInputOutput SYSTEM FAULT: Wrong format code " << itemFormat << ", only 0 (int) or 1 (char)\n";
-	    exit(2);
-	}
+        const int itemFormat (mem . loadFrom((formatAddrStart + kItem) * wordSize));
+        if(itemFormat == 0) { // int value
+            int a; s >> a; mem . storeAt((destAddrStart + kItem) * wordSize, a);
+        }
+        else if(itemFormat == 1) { // char value
+            char a; s >> a; mem . storeAt((destAddrStart + kItem) * wordSize, static_cast<int>(a));
+        }
+        else {
+            cerr << "ConsoleInputOutput SYSTEM FAULT: Wrong format code " << itemFormat << ", only 0 (int) or 1 (char)\n";
+            exit(2);
+        }
     }
     cerr << "\nConsoleInput end\n";
 }
 
 void ConsoleInOut::output(ostream &s,
-			  Memory  &mem,
-			  int      startAddr) {
+                          Memory  &mem,
+                          int      startAddr) {
     const int wordSize(sizeof(int));
 // @startAddr   : just the operation code
 // @startAddr+1 : the # of items to write
@@ -259,27 +259,27 @@ void ConsoleInOut::output(ostream &s,
     const int formatAddrStart(mem . loadFrom((startAddr + 3) * wordSize));
     cerr << "ConsoleOutput for " << nItems << " items:\n";
     for(int kItem(0); kItem < nItems; kItem++) {
-	const int itemFormat (mem . loadFrom((formatAddrStart + kItem) * wordSize));
-	if(itemFormat == 0) { // int value
-	    const int a(mem . loadFrom((fromAddrStart + kItem) * wordSize));
-	    s << a;
-	}
-	else if(itemFormat == 1) { // char value
-	    const char a(mem . loadFrom((fromAddrStart + kItem) * wordSize));
-	    s << a;
-	}
-	else {
-	    cerr << "ConsoleInputOutput SYSTEM FAULT: Wrong format code " << itemFormat << ", only 0 (int) or 1 (char)\n";
-	    exit(2);
-	}
+        const int itemFormat (mem . loadFrom((formatAddrStart + kItem) * wordSize));
+        if(itemFormat == 0) { // int value
+            const int a(mem . loadFrom((fromAddrStart + kItem) * wordSize));
+            s << a;
+        }
+        else if(itemFormat == 1) { // char value
+            const char a(mem . loadFrom((fromAddrStart + kItem) * wordSize));
+            s << a;
+        }
+        else {
+            cerr << "ConsoleInputOutput SYSTEM FAULT: Wrong format code " << itemFormat << ", only 0 (int) or 1 (char)\n";
+            exit(2);
+        }
     }
     cerr << "\nConsoleOutput end\n";
 }
 
 BaseCPU::BaseCPU(const string &id, ostream  &log, istream &consoleIn, ostream &consoleOut, 
-		 const int nGenReg, const int nProc) : pcReg(iPrs), cpuId(id), logStream(log),
-						       consoleOutputStream(consoleOut),
-						       consoleInputStream(consoleIn) {
+                 const int nGenReg, const int nProc) : pcReg(iPrs), cpuId(id), logStream(log),
+                                                       consoleOutputStream(consoleOut),
+                                                       consoleInputStream(consoleIn) {
     genReg . resize(nGenReg);
     proc   . resize(nProc);
     mem    . resize(nProc);
@@ -295,9 +295,9 @@ void BaseCPU::dumpReg(ostream &os, bool qRegAsWell) {
        << " MD = " << mdReg . getVal()
        << " qI = " << qInterruptible;
     if(qRegAsWell) {
-	for(unsigned int kReg(0); kReg < genReg . size(); kReg++) {
-	    os << " R" << kReg << " = " << genReg[kReg] . getVal();  
-	}
+        for(unsigned int kReg(0); kReg < genReg . size(); kReg++) {
+            os << " R" << kReg << " = " << genReg[kReg] . getVal();  
+        }
     }
     os << "\n";
 } 
@@ -316,10 +316,10 @@ void BaseCPU::pendingIntIfAny() throw(CExc) {
 
 void BaseCPU::run() throw(CExc) {
     for(iTick = uTick = 0; qRun && iTick < 10000; uTick += (mdReg . getVal() != 1),iTick++) {
-	execute(pcReg . fetch(proc[prReg . getVal()] . programText));
-	if(qInterruptible) {
-	    pendingIntIfAny();
-	}
+        execute(pcReg . fetch(proc[prReg . getVal()] . programText));
+        if(qInterruptible) {
+            pendingIntIfAny();
+        }
     }
     logStream << "CPU " << cpuId << " is now fully stopped, total " << iTick << " instructions overall.\n";
 }

@@ -20,28 +20,28 @@
 //===============================
 namespace nsSysteme
 {
-    class CExc	: public std::exception
+    class CExc        : public std::exception
     {
       protected :
-	  std::string m_info;
-	  std::string m_nomf;
-	  int         m_descrfic;
+          std::string m_info;
+          std::string m_nomf;
+          int         m_descrfic;
           bool        m_qdescrfic;
           int         m_errnoval;
-   	  std::string m_strerrorval;
+             std::string m_strerrorval;
       protected :
-	  std::ostream & _Edit (std::ostream & os) const;
-	  
+          std::ostream & _Edit (std::ostream & os) const;
+          
       public :
-	  CExc (const std::string & NomFonction, 
-		const std::string & Info) throw ();
-	  CExc (const std::string & NomFonction,
-		int                 Descrfic) throw ();
-	  virtual ~CExc (void)                            throw ();
-	  friend std::ostream & operator << (std::ostream & os, 
+          CExc (const std::string & NomFonction, 
+                const std::string & Info) throw ();
+          CExc (const std::string & NomFonction,
+                int                 Descrfic) throw ();
+          virtual ~CExc (void)                            throw ();
+          friend std::ostream & operator << (std::ostream & os, 
                                            const CExc & Item);
    
-	  
+          
     
     }; // CExc
     std::ostream & operator << (std::ostream & os, 
@@ -85,10 +85,10 @@ std::ostream & CEX::_Edit (std::ostream & os) const
       <<"\nParametres au moment de l'erreur"
       <<"\n";
     if(m_qdescrfic) {
-	os<<"descripteur de l'objet systeme: "<<m_descrfic;
+        os<<"descripteur de l'objet systeme: "<<m_descrfic;
     }
     else {
-	os<<m_info;
+        os<<m_info;
     }
     os << "\n";
     return os;

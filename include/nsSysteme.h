@@ -57,11 +57,11 @@ namespace nsSysteme
 
     void        LStat   (const char * file_name, struct stat * buf)
                              throw (CExc);
-    int 	    Dup2 (int oldfd, int newfd)
+    int             Dup2 (int oldfd, int newfd)
                             throw (CExc);
 
     ::off_t     Lseek (int fildes, ::off_t offset, int whence)
-    				throw (CExc); 
+                                    throw (CExc); 
 
 
 
@@ -118,10 +118,10 @@ namespace nsSysteme
  //  =====================================================================                                                    
 
      int         Select    (int n, ::fd_set * readfds,
-			     ::fd_set * writefds  = 0,
-			     ::fd_set * exceptfds = 0,
-			     struct timeval * timeout = 0)
-	 throw (CExc);
+                             ::fd_set * writefds  = 0,
+                             ::fd_set * exceptfds = 0,
+                             struct timeval * timeout = 0)
+         throw (CExc);
 
 
 
@@ -132,7 +132,7 @@ namespace nsSysteme
     ::pid_t Fork (void) throw (CExc);
 
 
- 	
+         
 
     ::pid_t Waitpid (::pid_t pid, int * status  = 0 , 
                                    int options =0 ) 
@@ -362,10 +362,10 @@ inline void nsSysteme::Kill (::pid_t pid, int sig) throw (CExc)
 //  ==========================================================================                                                     
 
  inline int   nsSysteme::Select    (int n, ::fd_set * readfds,
-			     ::fd_set * writefds  /*= 0*/,
-			     ::fd_set * exceptfds /*= 0*/,
-			     struct timeval * timeout /*= 0*/)
-		 throw (CExc) {
+                             ::fd_set * writefds  /*= 0*/,
+                             ::fd_set * exceptfds /*= 0*/,
+                             struct timeval * timeout /*= 0*/)
+                 throw (CExc) {
 
     int NbEvent;
     if (-1 == (NbEvent = ::select (n,

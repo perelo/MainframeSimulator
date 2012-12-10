@@ -16,8 +16,8 @@
 class CPU : public BaseCPU {
 public:
     CPU(const    string &id, ostream  &log,  
-	istream &consoleIn,  ostream  &consoleOut,
-	const int nGenReg, const int nProc);
+        istream &consoleIn,  ostream  &consoleOut,
+        const int nGenReg, const int nProc);
     ~CPU();
     void execute  (const Instruction &instr) throw(nsSysteme::CExc); 
     void interrupt(const int interruptNumber, bool qCLINTInstr) throw(nsSysteme::CExc);
