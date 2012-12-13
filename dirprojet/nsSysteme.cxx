@@ -113,10 +113,10 @@ void nsFctShell::Destroy (const char * const File)  throw (nsSysteme::CExc){
 
         char c;
         cout << "Avant unlink() : " << flush;
-        system(Commande.c_str());
+        if(system(Commande.c_str()));
         nsSysteme::Unlink (File);
         cout << "Apres unlink() : " << flush;
-        system(Commande.c_str());
+        if(system(Commande.c_str()));
         cout << "Appuyez sur return pour continuer";
         cin.get (c);
 
