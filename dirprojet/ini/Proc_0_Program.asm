@@ -114,27 +114,36 @@ LDPSW R0           ;LNR go on to execute proc of id R0  , @@end of interrupt #4@
 # R2 contains the number of items to write
 # R3 contains the start address in process memory where to read the items one by one
 # R4 contains the start address in process memory where to read the item types one by one (0 for int, 1 for char)
-SETRI R0 0         ;LNR=$int5: consoleOut request for current process  , the address where its pid is stored
+JZROI R2 $int1     ;LNR=$int5: consoleOut request for current process  , no item to write, go back to the scheduler
+SETRI R0 0         ;LNR the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleOut operation
 SETRI R6 20	   ;LNR offset to get the process slot address from the process id
 ADDRG R0 R1 R6	   ;LNR R0 now contains the process slot address
 SETRI R5 1	   ;LNR the readyToRun state
 STMEM R0 R5	   ;LNR store the readyToRun state for the current process
 SETRI R7 301	   ;LNR The address in kernel memory where we need to write the # of items for the consoleOut
-STMEM R7 R5        ;LNR just one item for now
-LDPRM R1 R3 R6     ;LNR R6 now contains the first item to be obtained (read) and thus sent to consoleOut (recall R3 is given to us by the proc)
+STMEM R7 R2        ;LNR store the number of items to write at addr 301
 SETRI R8 304	   ;LNR The address in kernel memory where we decided to write the item (copying it from the process memory)
-STMEM R8 R6 	   ;LNR now writing the item (from R6) which we just read from the process memory a few lines above, at address 304 in kernel mem
 SETRI R7 302	   ;LNR The address in kernel memory where we need to write the start address (param) where to read the items for the consoleOut
 STMEM R7 R8	   ;LNR now effectively preparing the start address "parameter" for consoleOut (i.e. write the number '304' at address 302)
-LDPRM R1 R4 R7     ;LNR R7 now contains the type of first item to be obtained (read) and thus sent to consoleOut
-SETRI R8 404	   ;LNR The address in kernel memory where we decided to write the item (copying it from the process memory)
-STMEM R8 R7 	   ;LNR now writing the item type (from R7) which we just read from the process memory a few lines above, at address 404 in kernel mem
+SETRI R9 404	   ;LNR The address in kernel memory where we decided to write the item (copying it from the process memory)
 SETRI R7 303	   ;LNR The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleOut
-STMEM R7 R8	   ;LNR now effectively preparing the type vect start address "parameter" for consoleOut (i.e. write the number '404' at address 303)
-SETRI R7 300	   ;LNR The address in kernel memory where, by writing a value of 1, we trigger the consoleOut
+STMEM R7 R9	   ;LNR now effectively preparing the type vect start address "parameter" for consoleOut (i.e. write the number '404' at address 303)
+SETRI R10 0        ;LNR counter: number of items already written, initial value is 0
+ADDRG R12 R3 R10   ;LNR=$write_item: R12 now contains the adress of the item to be obtained (read), start addr + counter offset
+LDPRM R1 R12 R6    ;LNR R6 now contains the first item to be obtained (read) and thus sent to consoleOut (recall R3 is given to us by the proc)
+ADDRG R13 R8 R10   ;LNR R13 now contains the adress to write the item we just read (R6), start addr + counter offset
+STMEM R13 R6 	   ;LNR now writing the item (from R6) which we just read from the process memory a few lines above, at address 304 + counter in kernel mem
+ADDRG R12 R4 R10   ;LNR R12 now contains the adress of the type of the item to be obtained (read), start addr + counter offset
+LDPRM R1 R12 R7    ;LNR R7 now contains the type of the item to be obtained (read) and thus sent to consoleOut
+ADDRG R13 R9 R10   ;LNR R13 now contains the adress to write the type of the item we just read (R6), start addr + counter offset
+STMEM R13 R7 	   ;LNR now writing the item type (from R7) which we just read from the process memory a few lines above, at address 404 + counter in kernel mem
+ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item in the kernel mem (at start addr of the vect to be read to output the items)
+SUBRG R11 R2 R10   ;LNR prepare R11 : number of items left to write
+JNZRI R11 $write_item ;LNR still some items to write, jump to $write_item to write the others
+SETRI R7 300	   ;LNR ok, no more items to write, store the address in kernel memory where, by writing a value of 1, we trigger the consoleOut
 STMEM R7 R5	   ;LNR there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
-JMBSI $int1        ;LNR we are done, so we make an absolute jump to $int1: to keep going , @@end of interrupt #5@@
+JMBSI $int1        ;LNR done, go back to the scheduler
 #-------- start of $int6 ----------------------------
 SETRI R0 0         ;LNR=$int6: consoleIn request for current process  , the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleIn operation
