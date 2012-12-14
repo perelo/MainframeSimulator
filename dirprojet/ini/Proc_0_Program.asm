@@ -145,8 +145,44 @@ SETRI R7 300	   ;LNR ok, no more items to write, store the address in kernel mem
 STMEM R7 R5	   ;LNR there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
 JMBSI $int1        ;LNR done, go back to the scheduler
 #-------- start of $int6 ----------------------------
-SETRI R0 0         ;LNR=$int6: consoleIn request for current process  , the address where its pid is stored
+# R2 contains the number of items to read
+# R3 contains the start address in process memory where to write the items one by one
+# R4 contains the start address in process memory where to read the item types one by one (0 for int, 1 for char)
+JZROI R2 $int1     ;LNR=$int6: consoleIn request for current process  , no item to read, go back to the scheduler
+SETRI R0 0         ;LNR the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleIn operation
+SETRI R6 20	   ;LNR offset to get the process slot address from the process id
+ADDRG R0 R1 R6	   ;LNR R0 now contains the process slot address
+SETRI R5 1	   ;LNR the readyToRun state
+STMEM R0 R5	   ;LNR store the readyToRun state for the current process
+SETRI R7 301	   ;LNR The address in kernel memory where we need to write the # of items for the consoleIn
+STMEM R7 R2        ;LNR store the number of items to write at addr 301
+SETRI R8 304	   ;LNR The address in kernel memory where we decided to write the items (copying them from the consoleInputStream)
+SETRI R7 302	   ;LNR The address in kernel memory where we need to write the start address (param) where to write the items we read from the consoleIn
+STMEM R7 R8	   ;LNR now effectively preparing the start address "parameter" for consoleIn (i.e. write the number '304' at address 302)
+SETRI R9 404	   ;LNR The address in kernel memory where we decided to write the item types (copying them from the process memory)
+SETRI R7 303	   ;LNR The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleIn
+STMEM R7 R9	   ;LNR now effectively preparing the type vect start address "parameter" for consoleIn (i.e. write the number '404' at address 303)
+SETRI R10 0        ;LNR counter : number of types already written, initial value is 0
+ADDRG R12 R4 R10   ;LNR=$write_type: R12 now contains the address of the item type to be obtained (read), start addr + counter offset
+LDPRM R1 R12 R6    ;LNR R6 now contains the first item type to be obtained (read)
+ADDRG R13 R9 R10   ;LNR R13 now contains the address to write the item type we just read (R6), start addr + counter offset
+STMEM R13 R6 	   ;LNR now writing the item type (from R6) which we just read from the process memory a few lines above, at addr 404 + counter in kernel mem
+ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item type in the kernel mem
+SUBRG R11 R10 R2   ;LNR prepare R11 : number of item types left to write
+JNZRI R11 $write_type ;LNR still some item types to write, jump to write_type to write the others
+SETRI R0 0         ;LNR ok, all the params have been prepared (# of items to read ; addr where to write the items ; addr where to read the types ; types of each item)
+SETRI R7 300	   ;LNR store the address in kernel memory where, by writing a value of 0, we trigger the consoleIn
+STMEM R7 R0	   ;LNR we request a "hardware consoleIn" through "memory-mapping IO", then we'll copy items from kernel mem to proc mem
+SETRI R10 0        ;LNR now the the vect of the read items (from consoleIn) is at addr contained in R9 , init counter: number of items already written
+ADDRG R12 R8 R10   ;LNR=$write_item_to_proc: R12 now contains the adress (in kernel mem) of the item to be wrote on the proc mem, start addr + counter offset
+LDMEM R12 R6       ;LNR R6 now contains the first item to be wrote in the proc mem
+ADDRG R13 R3 R10   ;LNR R13 now contains the address where to write the item we just read (R6), start addr + counter offset
+STPRM R1 R13 R6    ;LNR now writing the item (from R6) which we just read from the kernel memory, in the proc memory
+ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item in the proc mem
+SUBRG R11 R2 R10   ;LNR prepare R11 : number of items left to write
+JNZRI R11 $write_item_to_proc ;LNR still some items to write, jump to $write_item to write the others
+JMBSI $int1        ;LNR done, go back to the scheduler
 # ......
 #======== start of initial kernel setup =============
 SETRI R0 1         ;LNR=$prep: initial kernel setup, R0 constant increment/decrement value
