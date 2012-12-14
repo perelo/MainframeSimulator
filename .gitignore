@@ -2,3 +2,9 @@
 *.run
 *.a
 *.swp
+*.swo
+*.vim
+*.out
+*.old
+notes.txt
+dirprojet/save_Proc/
