@@ -113,20 +113,20 @@ SETRI R5 1	   ;111 the readyToRun state
 STMEM R0 R5	   ;112 store the readyToRun state for the current process
 SETRI R7 301	   ;113 The address in kernel memory where we need to write the # of items for the consoleOut
 STMEM R7 R2        ;114 store the number of items to write at addr 301
-SETRI R8 304	   ;115 The address in kernel memory where we decided to write the item (copying it from the process memory)
+SETRI R8 304	   ;115 The address in kernel memory where we decided to write the items (copying them from the process memory)
 SETRI R7 302	   ;116 The address in kernel memory where we need to write the start address (param) where to read the items for the consoleOut
 STMEM R7 R8	   ;117 now effectively preparing the start address "parameter" for consoleOut (i.e. write the number '304' at address 302)
-SETRI R9 404	   ;118 The address in kernel memory where we decided to write the item (copying it from the process memory)
+SETRI R9 404	   ;118 The address in kernel memory where we decided to write the item types (copying them from the process memory)
 SETRI R7 303	   ;119 The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleOut
 STMEM R7 R9	   ;120 now effectively preparing the type vect start address "parameter" for consoleOut (i.e. write the number '404' at address 303)
 SETRI R10 0        ;121 counter: number of items already written, initial value is 0
-ADDRG R12 R3 R10   ;122=$write_item: R12 now contains the adress of the item to be obtained (read), start addr + counter offset
+ADDRG R12 R3 R10   ;122=$write_item: R12 now contains the address of the item to be obtained (read), start addr + counter offset
 LDPRM R1 R12 R6    ;123 R6 now contains the first item to be obtained (read) and thus sent to consoleOut (recall R3 is given to us by the proc)
-ADDRG R13 R8 R10   ;124 R13 now contains the adress to write the item we just read (R6), start addr + counter offset
+ADDRG R13 R8 R10   ;124 R13 now contains the address to write the item we just read (R6), start addr + counter offset
 STMEM R13 R6 	   ;125 now writing the item (from R6) which we just read from the process memory a few lines above, at address 304 + counter in kernel mem
-ADDRG R12 R4 R10   ;126 R12 now contains the adress of the type of the item to be obtained (read), start addr + counter offset
+ADDRG R12 R4 R10   ;126 R12 now contains the address of the type of the item to be obtained (read), start addr + counter offset
 LDPRM R1 R12 R7    ;127 R7 now contains the type of the item to be obtained (read) and thus sent to consoleOut
-ADDRG R13 R9 R10   ;128 R13 now contains the adress to write the type of the item we just read (R6), start addr + counter offset
+ADDRG R13 R9 R10   ;128 R13 now contains the address to write the type of the item we just read (R6), start addr + counter offset
 STMEM R13 R7 	   ;129 now writing the item type (from R7) which we just read from the process memory a few lines above, at address 404 + counter in kernel mem
 ADDRG R10 R10 R5   ;130 increment the counter, because we juste wrote an item in the kernel mem (at start addr of the vect to be read to output the items)
 SUBRG R11 R2 R10   ;131 prepare R11 : number of items left to write
