@@ -1,9 +1,9 @@
 JMBSI $prep        ;LNR  absolute jump to $prep: to prepare the memory structure (intvec, proc/file tables)
 #-------- start of $int1 ----------------------------
 SETRI R1 0         ;LNR=$int1: address where the current proc id is stored
-LDMEM R1 R0	   ;LNR get the last scheduled process id, to start from right after it (round robin)
+LDMEM R1 R0        ;LNR get the last scheduled process id, to start from right after it (round robin)
 SETRI R2 1         ;LNR the increment for process table slots
-ADDRG R0 R0 R2	   ;LNR the next process id to study, or one past the last (then we are going to wrap around)
+ADDRG R0 R0 R2     ;LNR the next process id to study, or one past the last (then we are going to wrap around)
 SETRI R11 20       ;LNR the address where the number of processes is stored
 LDMEM R11 R1       ;LNR R1 now contains the number of processes
 SETRG R9 R1        ;LNR save R1 into R9, so R9 now also contains the number of processes -- constant
@@ -13,17 +13,17 @@ SETRI R4 3         ;LNR the SemWait process state value (proc states: 0(exit), 1
 SETRI R15 100      ;LNR the start address of the semaphore vector (where we keep the semaphore state values)
 SETRI R6 0         ;LNR for now 'no', we did not find any non-exited process yet    
 SETRG R7 R0        ;LNR=$top: copy R0 for the test for the wrap around
-SUBRG R7 R7 R9	   ;LNR prepare the test for R0 wrap around
+SUBRG R7 R7 R9     ;LNR prepare the test for R0 wrap around
 JNZRI R7 $nextPid  ;LNR if R7 (that is R0) is not equal to R9 (the number of processes) we can continue
-SETRI R0 1	   ;LNR otherwise, we need to set R0 to 1 to wrap around (pid zero is for the kernel)
-SETRG R10 R11	   ;LNR=$nextPid: prepare the offset for the process table start address
+SETRI R0 1         ;LNR otherwise, we need to set R0 to 1 to wrap around (pid zero is for the kernel)
+SETRG R10 R11      ;LNR=$nextPid: prepare the offset for the process table start address
 ADDRG R10 R10 R0   ;LNR now R10 contains the address of the current process slot in the process table
 SETRI R14 200      ;LNR the start of the proc sem waitlists address vect, one list for each proc, (count,(semId,semOp),(semId,semOp),...)
 ADDRG R14 R14 R0   ;LNR the address of the start of the proc sem waitlists address vect for the current process
 LDMEM R10 R8       ;LNR get the state of the current process (address in R10) into R8
 JZROI R8 $nextproc ;LNR this process is exited, we jump to $nextproc:
 SETRI R6 1         ;LNR yes, we found at least one non-exited process
-SETRG R12 R8	   ;LNR save R8 into R12, we need the state once again
+SETRG R12 R8       ;LNR save R8 into R12, we need the state once again
 SUBRG R8 R8 R3     ;LNR prepare the test whether this process is in the ready state
 JZROI R8 $startproc ;LNR jump to $startproc: for id R0 and process table address R10, since it is indeed ready
 SUBRG R12 R12 R4   ;LNR prepare the test whether this process is in semwait
@@ -79,18 +79,18 @@ SETRI R6 3         ;LNR the SemWait state value
 STMEM R0 R6        ;LNR change the process state to SemWait (address in R0)
 SETRI R14 200      ;LNR the start of the proc sem waitlists address vect, one for each proc, (count,(semId,semOp),(semId,semOp),...)
 ADDRG R14 R14 R1   ;LNR the start of the current proc sem waitlist address vect
-LDMEM R14 R5	   ;LNR now R5 contains the first address of the proc sem waitlists vect in kernel memory
-STMEM R5 R2	   ;LNR first we store the length, then we're going to go one by one to copy the R2 elements, starting with the first
-SETRI R7 1	   ;LNR constant increment
-ADDRG R5 R5 R7	   ;LNR=$semwcopy: advance R5 to the address of the first component of the current element of the proc sem waitlists 
-LDPRM R1 R3 R8	   ;LNR read the first component of the first semop from process memory
-STMEM R5 R8	   ;LNR store the first component of the first semop in kernel memory
-ADDRG R3 R3 R7	   ;LNR advance R3 to the address of the second component of the current semop of the proc sem waitlists in proc memory
-ADDRG R5 R5 R7	   ;LNR advance R5 to the address of the second component of the current semop of the proc sem waitlists in kernel memory
-LDPRM R1 R3 R8	   ;LNR read the second component of the current semop from process memory
-STMEM R5 R8	   ;LNR store the second component of the current semop in kernel memory
-ADDRG R3 R3 R7	   ;LNR advance R3 to the address of the first component of the next semop (if any) of the proc sem waitlists in proc memory
-SUBRG R2 R2 R7	   ;LNR decrement the loop counter
+LDMEM R14 R5       ;LNR now R5 contains the first address of the proc sem waitlists vect in kernel memory
+STMEM R5 R2        ;LNR first we store the length, then we're going to go one by one to copy the R2 elements, starting with the first
+SETRI R7 1         ;LNR constant increment
+ADDRG R5 R5 R7     ;LNR=$semwcopy: advance R5 to the address of the first component of the current element of the proc sem waitlists 
+LDPRM R1 R3 R8     ;LNR read the first component of the first semop from process memory
+STMEM R5 R8        ;LNR store the first component of the first semop in kernel memory
+ADDRG R3 R3 R7     ;LNR advance R3 to the address of the second component of the current semop of the proc sem waitlists in proc memory
+ADDRG R5 R5 R7     ;LNR advance R5 to the address of the second component of the current semop of the proc sem waitlists in kernel memory
+LDPRM R1 R3 R8     ;LNR read the second component of the current semop from process memory
+STMEM R5 R8        ;LNR store the second component of the current semop in kernel memory
+ADDRG R3 R3 R7     ;LNR advance R3 to the address of the first component of the next semop (if any) of the proc sem waitlists in proc memory
+SUBRG R2 R2 R7     ;LNR decrement the loop counter
 JNZRI R2 $semwcopy ;LNR loop back to continue copying until done
 SETRI R15 100      ;LNR done, so now preparing the start address of the semaphore vector (where we keep the semaphore state values)  
 SETRI R13 0        ;LNR preparing for semoptest(0): we are first only testing
@@ -117,32 +117,32 @@ LDPSW R0           ;LNR go on to execute proc of id R0  , @@end of interrupt #4@
 JZROI R2 $int1     ;LNR=$int5: consoleOut request for current process  , no item to write, go back to the scheduler
 SETRI R0 0         ;LNR the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleOut operation
-SETRI R6 20	   ;LNR offset to get the process slot address from the process id
-ADDRG R0 R1 R6	   ;LNR R0 now contains the process slot address
-SETRI R5 1	   ;LNR the readyToRun state
-STMEM R0 R5	   ;LNR store the readyToRun state for the current process
-SETRI R7 301	   ;LNR The address in kernel memory where we need to write the # of items for the consoleOut
+SETRI R6 20        ;LNR offset to get the process slot address from the process id
+ADDRG R0 R1 R6     ;LNR R0 now contains the process slot address
+SETRI R5 1         ;LNR the readyToRun state
+STMEM R0 R5        ;LNR store the readyToRun state for the current process
+SETRI R7 301       ;LNR The address in kernel memory where we need to write the # of items for the consoleOut
 STMEM R7 R2        ;LNR store the number of items to write at addr 301
-SETRI R8 304	   ;LNR The address in kernel memory where we decided to write the items (copying them from the process memory)
-SETRI R7 302	   ;LNR The address in kernel memory where we need to write the start address (param) where to read the items for the consoleOut
-STMEM R7 R8	   ;LNR now effectively preparing the start address "parameter" for consoleOut (i.e. write the number '304' at address 302)
-SETRI R9 404	   ;LNR The address in kernel memory where we decided to write the item types (copying them from the process memory)
-SETRI R7 303	   ;LNR The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleOut
-STMEM R7 R9	   ;LNR now effectively preparing the type vect start address "parameter" for consoleOut (i.e. write the number '404' at address 303)
+SETRI R8 304       ;LNR The address in kernel memory where we decided to write the items (copying them from the process memory)
+SETRI R7 302       ;LNR The address in kernel memory where we need to write the start address (param) where to read the items for the consoleOut
+STMEM R7 R8        ;LNR now effectively preparing the start address "parameter" for consoleOut (i.e. write the number '304' at address 302)
+SETRI R9 404       ;LNR The address in kernel memory where we decided to write the item types (copying them from the process memory)
+SETRI R7 303       ;LNR The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleOut
+STMEM R7 R9        ;LNR now effectively preparing the type vect start address "parameter" for consoleOut (i.e. write the number '404' at address 303)
 SETRI R10 0        ;LNR counter: number of items already written, initial value is 0
 ADDRG R12 R3 R10   ;LNR=$write_item: R12 now contains the address of the item to be obtained (read), start addr + counter offset
 LDPRM R1 R12 R6    ;LNR R6 now contains the first item to be obtained (read) and thus sent to consoleOut (recall R3 is given to us by the proc)
 ADDRG R13 R8 R10   ;LNR R13 now contains the address to write the item we just read (R6), start addr + counter offset
-STMEM R13 R6 	   ;LNR now writing the item (from R6) which we just read from the process memory a few lines above, at address 304 + counter in kernel mem
+STMEM R13 R6       ;LNR now writing the item (from R6) which we just read from the process memory a few lines above, at address 304 + counter in kernel mem
 ADDRG R12 R4 R10   ;LNR R12 now contains the address of the type of the item to be obtained (read), start addr + counter offset
 LDPRM R1 R12 R7    ;LNR R7 now contains the type of the item to be obtained (read) and thus sent to consoleOut
 ADDRG R13 R9 R10   ;LNR R13 now contains the address to write the type of the item we just read (R6), start addr + counter offset
-STMEM R13 R7 	   ;LNR now writing the item type (from R7) which we just read from the process memory a few lines above, at address 404 + counter in kernel mem
+STMEM R13 R7       ;LNR now writing the item type (from R7) which we just read from the process memory a few lines above, at address 404 + counter in kernel mem
 ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item in the kernel mem (at start addr of the vect to be read to output the items)
 SUBRG R11 R2 R10   ;LNR prepare R11 : number of items left to write
 JNZRI R11 $write_item ;LNR still some items to write, jump to $write_item to write the others
-SETRI R7 300	   ;LNR ok, no more items to write, store the address in kernel memory where, by writing a value of 1, we trigger the consoleOut
-STMEM R7 R5	   ;LNR there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
+SETRI R7 300       ;LNR ok, no more items to write, store the address in kernel memory where, by writing a value of 1, we trigger the consoleOut
+STMEM R7 R5        ;LNR there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
 JMBSI $int1        ;LNR done, go back to the scheduler
 #-------- start of $int6 ----------------------------
 # R2 contains the number of items to read
@@ -151,29 +151,29 @@ JMBSI $int1        ;LNR done, go back to the scheduler
 JZROI R2 $int1     ;LNR=$int6: consoleIn request for current process  , no item to read, go back to the scheduler
 SETRI R0 0         ;LNR the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleIn operation
-SETRI R6 20	   ;LNR offset to get the process slot address from the process id
-ADDRG R0 R1 R6	   ;LNR R0 now contains the process slot address
-SETRI R5 1	   ;LNR the readyToRun state
-STMEM R0 R5	   ;LNR store the readyToRun state for the current process
-SETRI R7 301	   ;LNR The address in kernel memory where we need to write the # of items for the consoleIn
+SETRI R6 20        ;LNR offset to get the process slot address from the process id
+ADDRG R0 R1 R6     ;LNR R0 now contains the process slot address
+SETRI R5 1         ;LNR the readyToRun state
+STMEM R0 R5        ;LNR store the readyToRun state for the current process
+SETRI R7 301       ;LNR The address in kernel memory where we need to write the # of items for the consoleIn
 STMEM R7 R2        ;LNR store the number of items to write at addr 301
-SETRI R8 304	   ;LNR The address in kernel memory where we decided to write the items (copying them from the consoleInputStream)
-SETRI R7 302	   ;LNR The address in kernel memory where we need to write the start address (param) where to write the items we read from the consoleIn
-STMEM R7 R8	   ;LNR now effectively preparing the start address "parameter" for consoleIn (i.e. write the number '304' at address 302)
-SETRI R9 404	   ;LNR The address in kernel memory where we decided to write the item types (copying them from the process memory)
-SETRI R7 303	   ;LNR The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleIn
-STMEM R7 R9	   ;LNR now effectively preparing the type vect start address "parameter" for consoleIn (i.e. write the number '404' at address 303)
+SETRI R8 304       ;LNR The address in kernel memory where we decided to write the items (copying them from the consoleInputStream)
+SETRI R7 302       ;LNR The address in kernel memory where we need to write the start address (param) where to write the items we read from the consoleIn
+STMEM R7 R8        ;LNR now effectively preparing the start address "parameter" for consoleIn (i.e. write the number '304' at address 302)
+SETRI R9 404       ;LNR The address in kernel memory where we decided to write the item types (copying them from the process memory)
+SETRI R7 303       ;LNR The address in kernel memory where we need to write the start address (param) where to read the item types for the consoleIn
+STMEM R7 R9        ;LNR now effectively preparing the type vect start address "parameter" for consoleIn (i.e. write the number '404' at address 303)
 SETRI R10 0        ;LNR counter : number of types already written, initial value is 0
 ADDRG R12 R4 R10   ;LNR=$write_type: R12 now contains the address of the item type to be obtained (read), start addr + counter offset
 LDPRM R1 R12 R6    ;LNR R6 now contains the first item type to be obtained (read)
 ADDRG R13 R9 R10   ;LNR R13 now contains the address to write the item type we just read (R6), start addr + counter offset
-STMEM R13 R6 	   ;LNR now writing the item type (from R6) which we just read from the process memory a few lines above, at addr 404 + counter in kernel mem
+STMEM R13 R6       ;LNR now writing the item type (from R6) which we just read from the process memory a few lines above, at addr 404 + counter in kernel mem
 ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item type in the kernel mem
 SUBRG R11 R10 R2   ;LNR prepare R11 : number of item types left to write
 JNZRI R11 $write_type ;LNR still some item types to write, jump to write_type to write the others
 SETRI R0 0         ;LNR ok, all the params have been prepared (# of items to read ; addr where to write the items ; addr where to read the types ; types of each item)
-SETRI R7 300	   ;LNR store the address in kernel memory where, by writing a value of 0, we trigger the consoleIn
-STMEM R7 R0	   ;LNR we request a "hardware consoleIn" through "memory-mapping IO", then we'll copy items from kernel mem to proc mem
+SETRI R7 300       ;LNR store the address in kernel memory where, by writing a value of 0, we trigger the consoleIn
+STMEM R7 R0        ;LNR we request a "hardware consoleIn" through "memory-mapping IO", then we'll copy items from kernel mem to proc mem
 SETRI R10 0        ;LNR now the the vect of the read items (from consoleIn) is at addr contained in R9 , init counter: number of items already written
 ADDRG R12 R8 R10   ;LNR=$write_item_to_proc: R12 now contains the adress (in kernel mem) of the item to be wrote on the proc mem, start addr + counter offset
 LDMEM R12 R6       ;LNR R6 now contains the first item to be wrote in the proc mem
@@ -209,19 +209,19 @@ SETRI R2 1         ;LNR ReadyToRun initial procstate value
 GETI0 R3           ;LNR number of processes
 SETRI R8 20        ;LNR address to save the number of processes
 STMEM R8 R3        ;LNR saving the number of processes
-ADDRG R9 R8 R0	   ;LNR offset for the semwaitlists
-SETRI R10 200	   ;LNR the start of the proc sem waitlists address vect, one for each proc, (count,(semId,semOp),(semId,semOp),...)
+ADDRG R9 R8 R0     ;LNR offset for the semwaitlists
+SETRI R10 200      ;LNR the start of the proc sem waitlists address vect, one for each proc, (count,(semId,semOp),(semId,semOp),...)
 ADDRG R7 R10 R8    ;LNR the first such address 
 STMEM R1 R2        ;LNR=$procSetup: set initial process state value to current slot
 ADDRG R1 R1 R0     ;LNR advance address for process table slot
-STMEM R10 R7	   ;LNR setting the start address for the current proc sem waitlists in the master proc sem waitlists address vect
-ADDRG R7 R7 R9	   ;LNR increment the start address with the right offset
+STMEM R10 R7       ;LNR setting the start address for the current proc sem waitlists in the master proc sem waitlists address vect
+ADDRG R7 R7 R9     ;LNR increment the start address with the right offset
 ADDRG R10 R10 R0   ;LNR advance address in the master proc sem waitlists address vect
 SUBRG R3 R3 R0     ;LNR decrement loop counter
 JNZRI R3 $procSetup ;LNR jump back to $procSetup: for max number processes
 SETRI R0 0         ;LNR address where current scheduled proc id is stored
-SETRI R1 0	   ;LNR pid 0
-STMEM R0 R1	   ;LNR just to initialize the state of the system for int1 
+SETRI R1 0         ;LNR pid 0
+STMEM R0 R1        ;LNR just to initialize the state of the system for int1 
 JMBSI $int1        ;LNR absolute jump to $int1: to start the work    , @@end of initial kernel setup@@
 SDOWN              ;LNR=$crash: 
 #-------- start of $semoptest() ---------------------
@@ -263,5 +263,5 @@ JMTOI $nextsem     ;LNR jump to $nextsem:
 #--------------------------------------
 #101: semVectStart: each semaphore is one int ("mem cell"), its ID is its offset from 100,
 #                  V() is zero, P() is one     , we store at 100 the max # of
-#		   semaphores (50)
+#              semaphores (50)
 #--------------------------------------
