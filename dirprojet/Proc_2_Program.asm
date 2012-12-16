@@ -20,6 +20,6 @@ CLINT R4          ; V() the semaphore semRead
 ADDRG R5 R5 R2    ; increment the address in the shared mem to write the remaining values
 ADDRG R6 R6 R2    ; increment the value to be written in shared mem
 SUBRG R7 R7 R2    ; decrement counter
-JNZRI R7 -8       ; jump to write another value while counter isn't at 0
+JNZRI R7 -9       ; jump to write another value while counter isn't at 0
 SETRI R9 2        ; int number for exit() 
 CLINT R9          ; kernel int2 exits the process

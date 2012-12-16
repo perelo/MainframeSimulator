@@ -26,7 +26,7 @@ ADDRG R8 R8 R2    ; increment the address where to write the values to read
 ADDRG R9 R9 R2    ; increment the address where to write the value types (int)
 ADDRG R5 R5 R2    ; increment the address where to read from the shared memory
 SUBRG R7 R7 R2    ; decrement counter
-JNZRI R7 -11      ; jump to read another value while counter isn't at 0
+JNZRI R7 -12      ; jump to read another value while counter isn't at 0
 SETRI R3 300      ; start address in process memory where we've written the read values
 SETRI R4 380      ; start address in process memory, for the "format"
 SETRI R2 10       ; how many elements -- 10
