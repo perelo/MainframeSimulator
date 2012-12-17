@@ -114,12 +114,12 @@ LDPSW R0           ;LNR go on to execute proc of id R0  , @@end of interrupt #4@
 # R2 contains the number of items to write
 # R3 contains the start address in process memory where to read the items one by one
 # R4 contains the start address in process memory where to read the item types one by one (0 for int, 1 for char)
-JZROI R2 $int1     ;LNR=$int5: consoleOut request for current process  , no item to write, go back to the scheduler
-SETRI R0 0         ;LNR the address where its pid is stored
+SETRI R0 0         ;LNR=$int5: consoleOut request for current process  , the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleOut operation
 SETRI R6 20        ;LNR offset to get the process slot address from the process id
 ADDRG R0 R1 R6     ;LNR R0 now contains the process slot address
 SETRI R5 1         ;LNR the readyToRun state
+JZROI R2 $int1     ;LNR no item to write, go back to the scheduler
 STMEM R0 R5        ;LNR store the readyToRun state for the current process
 SETRI R7 301       ;LNR The address in kernel memory where we need to write the # of items for the consoleOut
 STMEM R7 R2        ;LNR store the number of items to write at addr 301
@@ -148,13 +148,13 @@ JMBSI $int1        ;LNR absolute jump to $int1: to keep going  , @@end of interr
 # R2 contains the number of items to read
 # R3 contains the start address in process memory where to write the items one by one
 # R4 contains the start address in process memory where to read the item types one by one (0 for int, 1 for char)
-JZROI R2 $int1     ;LNR=$int6: consoleIn request for current process  , no item to read, go back to the scheduler
-SETRI R0 0         ;LNR the address where its pid is stored
+SETRI R0 0         ;LNR=$int6: consoleIn request for current process  , the address where its pid is stored
 LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleIn operation
 SETRI R6 20        ;LNR offset to get the process slot address from the process id
 ADDRG R0 R1 R6     ;LNR R0 now contains the process slot address
 SETRI R5 1         ;LNR the readyToRun state
 STMEM R0 R5        ;LNR store the readyToRun state for the current process
+JZROI R2 $int1     ;LNR no item to read, go back to the scheduler
 SETRI R7 301       ;LNR The address in kernel memory where we need to write the # of items for the consoleIn
 STMEM R7 R2        ;LNR store the number of items to write at addr 301
 SETRI R8 304       ;LNR The address in kernel memory where we decided to write the items (copying them from the consoleInputStream)

@@ -104,12 +104,12 @@ SUBRG R0 R0 R6     ;102 get the process id in R0
 SETRI R1 0         ;103 address where the current proc id is stored
 STMEM R1 R0        ;104 store the (newly become) current proc id
 LDPSW R0           ;105 go on to execute proc of id R0  , @@end of interrupt #4@@
-JZROI R2 -106     ;106=$int5: consoleOut request for current process  , no item to write, go back to the scheduler
-SETRI R0 0         ;107 the address where its pid is stored
-LDMEM R0 R1        ;108 R1 now has the pid of the process which is requesting the consoleOut operation
-SETRI R6 20        ;109 offset to get the process slot address from the process id
-ADDRG R0 R1 R6     ;110 R0 now contains the process slot address
-SETRI R5 1         ;111 the readyToRun state
+SETRI R0 0         ;106=$int5: consoleOut request for current process  , the address where its pid is stored
+LDMEM R0 R1        ;107 R1 now has the pid of the process which is requesting the consoleOut operation
+SETRI R6 20        ;108 offset to get the process slot address from the process id
+ADDRG R0 R1 R6     ;109 R0 now contains the process slot address
+SETRI R5 1         ;110 the readyToRun state
+JZROI R2 -111     ;111 no item to write, go back to the scheduler
 STMEM R0 R5        ;112 store the readyToRun state for the current process
 SETRI R7 301       ;113 The address in kernel memory where we need to write the # of items for the consoleOut
 STMEM R7 R2        ;114 store the number of items to write at addr 301
@@ -134,13 +134,13 @@ JNZRI R11 -11 ;132 still some items to write, jump to $write_item to write the o
 SETRI R7 300       ;133 ok, no more items to write, store the address in kernel memory where, by writing a value of 1, we trigger the consoleOut
 STMEM R7 R5        ;134 there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
 JMBSI 1        ;135 absolute jump to $int1: to keep going  , @@end of interrupt #5@@
-JZROI R2 -136     ;136=$int6: consoleIn request for current process  , no item to read, go back to the scheduler
-SETRI R0 0         ;137 the address where its pid is stored
-LDMEM R0 R1        ;138 R1 now has the pid of the process which is requesting the consoleIn operation
-SETRI R6 20        ;139 offset to get the process slot address from the process id
-ADDRG R0 R1 R6     ;140 R0 now contains the process slot address
-SETRI R5 1         ;141 the readyToRun state
-STMEM R0 R5        ;142 store the readyToRun state for the current process
+SETRI R0 0         ;136=$int6: consoleIn request for current process  , the address where its pid is stored
+LDMEM R0 R1        ;137 R1 now has the pid of the process which is requesting the consoleIn operation
+SETRI R6 20        ;138 offset to get the process slot address from the process id
+ADDRG R0 R1 R6     ;139 R0 now contains the process slot address
+SETRI R5 1         ;140 the readyToRun state
+STMEM R0 R5        ;141 store the readyToRun state for the current process
+JZROI R2 -142     ;142 no item to read, go back to the scheduler
 SETRI R7 301       ;143 The address in kernel memory where we need to write the # of items for the consoleIn
 STMEM R7 R2        ;144 store the number of items to write at addr 301
 SETRI R8 304       ;145 The address in kernel memory where we decided to write the items (copying them from the consoleInputStream)
