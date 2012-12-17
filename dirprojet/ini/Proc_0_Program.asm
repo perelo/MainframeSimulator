@@ -143,7 +143,7 @@ SUBRG R11 R2 R10   ;LNR prepare R11 : number of items left to write
 JNZRI R11 $write_item ;LNR still some items to write, jump to $write_item to write the others
 SETRI R7 300       ;LNR ok, no more items to write, store the address in kernel memory where, by writing a value of 1, we trigger the consoleOut
 STMEM R7 R5        ;LNR there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
-JMBSI $int1        ;LNR done, go back to the scheduler
+JMBSI $int1        ;LNR absolute jump to $int1: to keep going  , @@end of interrupt #5@@
 #-------- start of $int6 ----------------------------
 # R2 contains the number of items to read
 # R3 contains the start address in process memory where to write the items one by one
@@ -181,8 +181,8 @@ ADDRG R13 R3 R10   ;LNR R13 now contains the address where to write the item we 
 STPRM R1 R13 R6    ;LNR now writing the item (from R6) which we just read from the kernel memory, in the proc memory
 ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item in the proc mem
 SUBRG R11 R2 R10   ;LNR prepare R11 : number of items left to write
-JNZRI R11 $write_item_to_proc ;LNR still some items to write, jump to $write_item to write the others
-JMBSI $int1        ;LNR done, go back to the scheduler
+JNZRI R11 $write_item_to_proc ;LNR still some items to write, jump to $write_item_to_proc to write the others
+JMBSI $int1        ;LNR absolute jump to $int1: to keep going  , @@end of interrupt #6@@
 #-------- start of $int7 ----------------------------
 # R2 contains the number of random items to generate
 # R3 contains the min value of each random item -- [min, max[
@@ -228,13 +228,13 @@ SETRI R2 $int3     ;LNR prog address of $int3: scheduler interrupt
 STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #3
 ADDRG R1 R1 R0     ;LNR increment the address of slots
 SETRI R2 $int4     ;LNR prog address of $int4: semop Request
-STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #3
-ADDRG R1 R1 R0     ;LNR increment the address of slots
-SETRI R2 $int5     ;LNR address of $int5: consoleOut Request
 STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #4
 ADDRG R1 R1 R0     ;LNR increment the address of slots
-SETRI R2 $int6     ;LNR address of $int6: consoleIn Request
+SETRI R2 $int5     ;LNR address of $int5: consoleOut Request
 STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #5
+ADDRG R1 R1 R0     ;LNR increment the address of slots
+SETRI R2 $int6     ;LNR address of $int6: consoleIn Request
+STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #6
 ADDRG R1 R1 R0     ;LNR increment the address of slots
 SETRI R2 $int7     ;LNR address of $int7: consoleIn Request
 STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #7

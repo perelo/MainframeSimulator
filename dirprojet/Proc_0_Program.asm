@@ -133,7 +133,7 @@ SUBRG R11 R2 R10   ;131 prepare R11 : number of items left to write
 JNZRI R11 -11 ;132 still some items to write, jump to $write_item to write the others
 SETRI R7 300       ;133 ok, no more items to write, store the address in kernel memory where, by writing a value of 1, we trigger the consoleOut
 STMEM R7 R5        ;134 there we go -- we just requested a "hardware consoleOut" through "memory-mapping IO"
-JMBSI 1        ;135 done, go back to the scheduler
+JMBSI 1        ;135 absolute jump to $int1: to keep going  , @@end of interrupt #5@@
 JZROI R2 -136     ;136=$int6: consoleIn request for current process  , no item to read, go back to the scheduler
 SETRI R0 0         ;137 the address where its pid is stored
 LDMEM R0 R1        ;138 R1 now has the pid of the process which is requesting the consoleIn operation
@@ -167,8 +167,8 @@ ADDRG R13 R3 R10   ;165 R13 now contains the address where to write the item we 
 STPRM R1 R13 R6    ;166 now writing the item (from R6) which we just read from the kernel memory, in the proc memory
 ADDRG R10 R10 R5   ;167 increment the counter, because we juste wrote an item in the proc mem
 SUBRG R11 R2 R10   ;168 prepare R11 : number of items left to write
-JNZRI R11 -7 ;169 still some items to write, jump to $write_item to write the others
-JMBSI 1        ;170 done, go back to the scheduler
+JNZRI R11 -7 ;169 still some items to write, jump to $write_item_to_proc to write the others
+JMBSI 1        ;170 absolute jump to $int1: to keep going  , @@end of interrupt #6@@
 SETRI R0 0         ;171=$int7: randomGenerate request for current process  , the address where its pid is stored
 LDMEM R0 R1        ;172 R1 now has the pid of the process which is requesting the consoleIn operation
 SETRI R6 20        ;173 offset to get the process slot address from the process id
@@ -208,13 +208,13 @@ SETRI R2 60     ;206 prog address of $int3: scheduler interrupt
 STMEM R1 R2        ;207 setting up the interrupt vector for interrupt #3
 ADDRG R1 R1 R0     ;208 increment the address of slots
 SETRI R2 67     ;209 prog address of $int4: semop Request
-STMEM R1 R2        ;210 setting up the interrupt vector for interrupt #3
+STMEM R1 R2        ;210 setting up the interrupt vector for interrupt #4
 ADDRG R1 R1 R0     ;211 increment the address of slots
 SETRI R2 106     ;212 address of $int5: consoleOut Request
-STMEM R1 R2        ;213 setting up the interrupt vector for interrupt #4
+STMEM R1 R2        ;213 setting up the interrupt vector for interrupt #5
 ADDRG R1 R1 R0     ;214 increment the address of slots
 SETRI R2 136     ;215 address of $int6: consoleIn Request
-STMEM R1 R2        ;216 setting up the interrupt vector for interrupt #5
+STMEM R1 R2        ;216 setting up the interrupt vector for interrupt #6
 ADDRG R1 R1 R0     ;217 increment the address of slots
 SETRI R2 171     ;218 address of $int7: consoleIn Request
 STMEM R1 R2        ;219 setting up the interrupt vector for interrupt #7
