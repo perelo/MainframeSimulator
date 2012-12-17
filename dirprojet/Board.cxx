@@ -8,6 +8,7 @@
 #include <string>
 #include <exception>
 #include <cstdlib>
+#include <ctime>
 #include "CExc.h"
 
 
@@ -274,6 +275,35 @@ void ConsoleInOut::output(ostream &s,
         }
     }
     cerr << "\nConsoleOutput end\n";
+}
+
+RandomGenerator::RandomGenerator () {
+    srand(time(NULL));
+}
+
+void RandomGenerator::generateRandom (Memory &mem, int startAddr) throw (nsSysteme::CExc) {
+    const int wordSize(sizeof(int));
+// @startAddr   : could be anything, addr used to trigger this
+// @startAddr+1 : the # of random items to generate
+// @startAddr+2 : the minimal value of a random number
+// @startAddr+3 : the maximal value of a random number
+// @startAddr+4 : the start address where to write the random generated items
+    const int nItems       (mem . loadFrom((startAddr + 1) * wordSize));
+    const int minValue     (mem . loadFrom((startAddr + 2) * wordSize));
+    const int maxValue     (mem . loadFrom((startAddr + 3) * wordSize));
+    const int destAddrStart(mem . loadFrom((startAddr + 4) * wordSize));
+    if(nItems < 0) {
+        throw CExc("RandomGenerator::generateRandom()"," negative # of random items to generate");
+    }
+    if (minValue > maxValue) {
+        throw CExc("RandomGenerator::generateRandom()"," minValue > maxValue");
+    }
+    cerr << "Generating " << nItems << " random items, "
+         << "boundaries are [" << minValue << ',' << maxValue << "[\n";
+    const int diff (maxValue - minValue);
+    for(int kRdm(0); kRdm < nItems; ++kRdm) {
+        mem . storeAt((destAddrStart + kRdm) * wordSize, rand() % diff + minValue);
+    }
 }
 
 BaseCPU::BaseCPU(const string &id, ostream  &log, istream &consoleIn, ostream &consoleOut, 

@@ -211,6 +211,12 @@ void CPU::execute(const Instruction &instr) throw(CExc){
                     }
                     qNormal = false;
                 }
+                // or if it is a special memory-mapped random generator address and request
+                else if (genReg[instr . op1] . getVal() == RANDOMGENERATORTRIGGER) {
+                    logStream << cpuLog << prReg . getVal() << " " << instr << " ";
+                    randomGenerator . generateRandom(mem[crtProc],genReg[instr . op1] . getVal());
+                    qNormal = false;
+                }
             }
             if(qNormal) {
                 mem[crtProc] . storeAt(genReg[instr . op1] . getVal() * wordSize, genReg[instr . op2] . getVal());

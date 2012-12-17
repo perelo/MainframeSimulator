@@ -155,6 +155,11 @@ public:
                 int      startAddr);
 };
 
+class RandomGenerator {
+public:
+    RandomGenerator();
+    void generateRandom (Memory &mem, int startAddr) throw (nsSysteme::CExc);
+};
 
 class BaseCPU {
 protected:
@@ -173,6 +178,7 @@ protected:
     ostream         &consoleOutputStream;
     istream         &consoleInputStream;
     ConsoleInOut     consoleInOut;
+    RandomGenerator  randomGenerator;
     bool            qRun;
     bool            qInterruptible;
     int             iTick,uTick;

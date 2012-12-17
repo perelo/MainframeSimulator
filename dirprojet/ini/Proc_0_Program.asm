@@ -183,7 +183,38 @@ ADDRG R10 R10 R5   ;LNR increment the counter, because we juste wrote an item in
 SUBRG R11 R2 R10   ;LNR prepare R11 : number of items left to write
 JNZRI R11 $write_item_to_proc ;LNR still some items to write, jump to $write_item to write the others
 JMBSI $int1        ;LNR done, go back to the scheduler
-# ......
+#-------- start of $int7 ----------------------------
+# R2 contains the number of random items to generate
+# R3 contains the min value of each random item -- [min, max[
+# R4 contains the max value of each random item -- [min, max[
+# R5 contains the start address in process memory where to write the random-generated items one by one
+SETRI R0 0         ;LNR=$int7: randomGenerate request for current process  , the address where its pid is stored
+LDMEM R0 R1        ;LNR R1 now has the pid of the process which is requesting the consoleIn operation
+SETRI R6 20        ;LNR offset to get the process slot address from the process id
+ADDRG R0 R1 R6     ;LNR R0 now contains the process slot address
+SETRI R7 1         ;LNR the readyToRun state, also used as constant increment
+STMEM R0 R7        ;LNR store the readyToRun state for the current process
+JZROI R2 $int1     ;LNR no item to generate, jump to $int1: to keep going
+SETRI R8 501       ;LNR address where to write the # of items to generate
+STMEM R8 R2        ;LNR store the # of items to generate at addr 500
+ADDRG R8 R8 R7     ;LNR increment addr, R8 now contains the addr where to write the min value
+STMEM R8 R3        ;LNR store the min value at addr 502
+ADDRG R8 R8 R7     ;LNR increment addr, R8 now contains the addr where to write the max value
+STMEM R8 R4        ;LNR store the max value at addr 503
+SETRI R9 505       ;LNR start address where to write the random-generated items (in kernel mem)
+ADDRG R8 R8 R7     ;LNR increment addr, R8 now contains the addr of the start addr where to write the random-generated items
+STMEM R8 R9        ;LNR store the start addr where to write the items (i.e write 505 at addr 504)
+SETRI R8 500       ;LNR code to trigger the generation
+STMEM R8 R8        ;LNR trigger the generation -- second parameter is ignored
+SETRI R10 0        ;LNR init counter: number of items already written
+ADDRG R11 R9 R10   ;LNR=$write_random: R11 now contains the address (in kernel mem) of the item to be wrote on the proc mem, start addr + counter offset
+LDMEM R11 R6       ;LNR R6 now contains the first item to be wrote in the proc mem
+ADDRG R12 R5 R10   ;LNR R12 now contains the address where to write the item we just read (R6), start addr + counter offset
+STPRM R1 R12 R6    ;LNR now writing the item (from R6) which we just read from the kernel memory, in the proc memory
+ADDRG R10 R10 R7   ;LNR increment the counter, because we juste wrote an item in the proc mem
+SUBRG R13 R2 R10   ;LNR prepare R13 : number of items left to write
+JNZRI R13 $write_random ;LNR still some items to write, jump to $write_random to write the others
+JMBSI $int1        ;LNR absolute jump to $int1: to keep going  , @@end of interrupt #7@@
 #======== start of initial kernel setup =============
 SETRI R0 1         ;LNR=$prep: initial kernel setup, R0 constant increment/decrement value
 SETRI R1 1         ;LNR address of first slot in the interrupt vector
@@ -204,6 +235,9 @@ STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #4
 ADDRG R1 R1 R0     ;LNR increment the address of slots
 SETRI R2 $int6     ;LNR address of $int6: consoleIn Request
 STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #5
+ADDRG R1 R1 R0     ;LNR increment the address of slots
+SETRI R2 $int7     ;LNR address of $int7: consoleIn Request
+STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #7
 SETRI R1 21        ;LNR address where process table starts
 SETRI R2 1         ;LNR ReadyToRun initial procstate value
 GETI0 R3           ;LNR number of processes
