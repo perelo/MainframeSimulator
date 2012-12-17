@@ -11,7 +11,7 @@ using namespace std;
 int main(int argc, char * argv []) {
     try {    
         cerr << (sizeof(int));
-        CPU cpu("M",cerr,cin,cout,32,5); 
+        CPU cpu("M",cerr,cin,cout,32,6); 
         cpu . run();
         return 0;
     }
