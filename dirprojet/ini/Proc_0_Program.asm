@@ -241,18 +241,54 @@ STMEM R1 R2        ;LNR setting up the interrupt vector for interrupt #7
 SETRI R1 21        ;LNR address where process table starts
 SETRI R2 1         ;LNR ReadyToRun initial procstate value
 GETI0 R3           ;LNR number of processes
+SETRG R13 R3       ;LNR save the number of process cuz we need it again after $procAndSchedSeqSetup
 SETRI R8 20        ;LNR address to save the number of processes
 STMEM R8 R3        ;LNR saving the number of processes
 ADDRG R9 R8 R0     ;LNR offset for the semwaitlists
 SETRI R10 201      ;LNR the start of the proc sem waitlists address vect, one for each proc, (count,(semId,semOp),(semId,semOp),...)
 ADDRG R7 R10 R8    ;LNR the first such address 
-STMEM R1 R2        ;LNR=$procSetup: set initial process state value to current slot
+SETRI R4 501       ;LNR address where to write the # of items to generate
+STMEM R4 R3        ;LNR store the # of items to generate at addr 501
+ADDRG R4 R4 R0     ;LNR increment addr, R4 now contains the addr where to write the min value
+SETRI R5 0         ;LNR the min value
+STMEM R4 R5        ;LNR store the min value (0) at addr 502
+ADDRG R4 R4 R0     ;LNR increment addr, R4 now contains the addr where to write the max value
+SETRG R5 R3        ;LNR the max value is nb_proc cuz we want the offset of the seq to switch with seq[0]
+STMEM R4 R5        ;LNR store the max value at addr 503
+SETRI R6 600       ;LNR the start of the scheduler's sequence address vect
+ADDRG R6 R6 R3     ;LNR R6 now contains the start address where to write the random-generated items (in kernel mem)
+ADDRG R4 R4 R0     ;LNR increment addr, R4 now contains the addr of the start addr where to write the random-generated items
+STMEM R4 R6        ;LNR store the start addr where to write the items (i.e write 600 - nb_proc at addr 504)
+SETRI R4 500       ;LNR code to trigger the generation
+STMEM R4 R4        ;LNR trigger the generation -- second parameter is ignored
+SETRI R4 599       ;LNR the start of the scheduler's sequence address vect - 1 (hope there's at least one)
+ADDRG R4 R4 R3     ;LNR now R4 is the end of the scheduler's sequence address vect, cuz we store the pids backward
+STMEM R1 R2        ;LNR=$procAndSchedSeqSetup: set initial process state value to current slot
 ADDRG R1 R1 R0     ;LNR advance address for process table slot
 STMEM R10 R7       ;LNR setting the start address for the current proc sem waitlists in the master proc sem waitlists address vect
 ADDRG R7 R7 R9     ;LNR increment the start address with the right offset
 ADDRG R10 R10 R0   ;LNR advance address in the master proc sem waitlists address vect
+STMEM R4 R3        ;LNR store the current <maxpid - pid> in the sequence
+SUBRG R4 R4 R0     ;LNR decrement the addr where to store the current pid, so it is filled backward
 SUBRG R3 R3 R0     ;LNR decrement loop counter
-JNZRI R3 $procSetup ;LNR jump back to $procSetup: for max number processes
+JNZRI R3 $procAndSchedSeqSetup ;LNR jump back to $procSetup: for max number processes
+ADDRG R4 R4 R0     ;LNR R4 is now 600, the start addr of the seq
+SETRG R6 R4        ;LNR store the addr of the first item in the seq (the one to be swapped w/ a random item in the seq)
+ADDRG R4 R4 R13    ;LNR R4 is now the start addr of the random-generated list
+SETRI R2 0         ;LNR also count of swapped items
+LDMEM R4 R7        ;LNR=$swapRandom: get the random number, it's the offset in the pid seq to swap with the first item of the seq
+ADDRG R9 R6 R7     ;LNR store the addr of the item to swap
+LDMEM R9 R10       ;LNR get the item to be swapped in R10
+LDMEM R6 R11       ;LNR get the first item of the seq in R11
+SETRG R12 R10      ;LNR tmp item, contains R10
+SETRG R10 R11      ;LNR put R11 in R10
+SETRG R11 R12      ;LNR put R12 (R10) in R11
+STMEM R6 R11       ;LNR now store the first item of the seq in random pos
+STMEM R9 R10       ;LNR and store the item get at random pos in first pos
+ADDRG R4 R4 R0     ;LNR increment the addr in the random-generated list
+ADDRG R2 R2 R0     ;LNR increment the counter
+SUBRG R1 R13 R2    ;LNR prepare R1 to tell us if we are done
+JNZRI R1 $swapRandom ;LNR jump to $swapRandom if we still have some items to swap
 SETRI R0 0         ;LNR address where current scheduled proc id is stored
 SETRI R1 0         ;LNR pid 0
 STMEM R0 R1        ;LNR just to initialize the state of the system for int1 

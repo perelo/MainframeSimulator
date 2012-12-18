@@ -29,14 +29,14 @@ SUBRG R12 R12 R4   ;27 prepare the test whether this process is in semwait
 JNZRI R12 11 ;28 jump to $nextproc: since the proc of id R0 is not in semwait
 SETRI R13 0        ;29 ok, this proc is in semwait, preparing for semoptest(0): we are first only testing
 SETRI R5 1         ;30 the frame width for the subroutine call 
-SETRI R16 241 ;31 the address of the start of the $semoptest sub
+SETRI R16 277 ;31 the address of the start of the $semoptest sub
 CLLSB R5 R16       ;32 call to $semoptest(R13=0, R14=current proc semlist address, R15=semvect addr)
 JZROI R16 6 ;33  because it means we still cannot apply the semops this proc was waiting for
 SETRI R13 1        ;34 ok, ready to apply them 
 SETRI R5 1         ;35 the frame width for the subroutine call
-SETRI R16 241 ;36 the address of the start of the $semoptest sub    
+SETRI R16 277 ;36 the address of the start of the $semoptest sub    
 CLLSB R5 R16       ;37 call to $semoptest(R13=1, R14=current proc semlist address, R15=semvect addr)
-JZROI R16 200   ;38 this should never ever happen
+JZROI R16 236   ;38 this should never ever happen
 JMTOI 8   ;39 jump to $startproc: we are now done with all the semaphore operations, and can complete the election of process of pid R0
 ADDRG R0 R0 R2     ;40=$nextproc: increment the pid for the next process to study 
 SUBRG R1 R1 R2     ;41 decrement loop counter
@@ -89,14 +89,14 @@ JNZRI R2 -10 ;87 loop back to continue copying until done
 SETRI R15 100      ;88 done, so now preparing the start address of the semaphore vector (where we keep the semaphore state values)  
 SETRI R13 0        ;89 preparing for semoptest(0): we are first only testing
 SETRI R5 1         ;90 the frame width for the subroutine call 
-SETRI R16 241 ;91 the address of the start of the $semoptest sub
+SETRI R16 277 ;91 the address of the start of the $semoptest sub
 CLLSB R5 R16       ;92 call to $semoptest(R13=0, R14=current proc semlist address, R15=semvect addr)
 JZROI R16 -93    ;93 because it means we cannot apply the semops, so we need to elect another process , the current one will remain in SemWait for now
 SETRI R13 1        ;94 ok, ready to apply them 
 SETRI R5 1         ;95 the frame width for the subroutine call 
-SETRI R16 241 ;96 the address of the start of the $semoptest sub
+SETRI R16 277 ;96 the address of the start of the $semoptest sub
 CLLSB R5 R16       ;97 call to $semoptest(R13=1, R14=current proc semlist address, R15=semvect addr)
-JZROI R16 140   ;98 this should never ever happen
+JZROI R16 176   ;98 this should never ever happen
 SETRI R6 2         ;99 the Running state, for the ready process which we just found
 STMEM R0 R6        ;100 change the process state back to running (address in R0)
 SETRI R6 20        ;101 offset to get the process id from the process slot address
@@ -221,46 +221,82 @@ STMEM R1 R2        ;219 setting up the interrupt vector for interrupt #7
 SETRI R1 21        ;220 address where process table starts
 SETRI R2 1         ;221 ReadyToRun initial procstate value
 GETI0 R3           ;222 number of processes
-SETRI R8 20        ;223 address to save the number of processes
-STMEM R8 R3        ;224 saving the number of processes
-ADDRG R9 R8 R0     ;225 offset for the semwaitlists
-SETRI R10 201      ;226 the start of the proc sem waitlists address vect, one for each proc, (count,(semId,semOp),(semId,semOp),...)
-ADDRG R7 R10 R8    ;227 the first such address 
-STMEM R1 R2        ;228=$procSetup: set initial process state value to current slot
-ADDRG R1 R1 R0     ;229 advance address for process table slot
-STMEM R10 R7       ;230 setting the start address for the current proc sem waitlists in the master proc sem waitlists address vect
-ADDRG R7 R7 R9     ;231 increment the start address with the right offset
-ADDRG R10 R10 R0   ;232 advance address in the master proc sem waitlists address vect
-SUBRG R3 R3 R0     ;233 decrement loop counter
-JNZRI R3 -7 ;234 jump back to $procSetup: for max number processes
-SETRI R0 0         ;235 address where current scheduled proc id is stored
-SETRI R1 0         ;236 pid 0
-STMEM R0 R1        ;237 just to initialize the state of the system for int1 
-JMBSI 1        ;238 absolute jump to $int1: to start the work    , @@end of initial kernel setup@@
-SDOWN              ;239=$crash: 
-SETRI R20 0        ;240 the V() semop value (and V state value)
-SETRI R16 1        ;241=$semoptest: can we indeed P() each sem we were waiting for ? (the V()'s will go through anyway)
-LDMEM R14 R22      ;242 R22 now contains the address where the current proc semwaitlist really starts
-LDMEM R22 R17      ;243 R17 contains the number of semops requested by the current proc (whatever that proc is)
-ADDRG R22 R22 R16  ;244=$procsemtop: R22 contains the address of the current semaphore index
-LDMEM R22 R18      ;245 R18 contains the current semaphore index
-ADDRG R18 R18 R15  ;246 R18 now contains the address of the current semaphore
-LDMEM R18 R19      ;247 R19 contains the state value of the current semaphore
-SUBRG R19 R19 R16  ;248 prepare the test whether the current semaphore is in the P state (then R19 is going to be zero)
-ADDRG R22 R22 R16  ;249 R22 now contains the address of the current semop 
-LDMEM R22 R21      ;250 R21 now contains the semop code for the current semaphore
-SUBRG R21 R21 R16  ;251 prepare the test whether the current semop code is P() (then R21 is going to be zero)
-JNZRI R19 4 ;252 jump to $maybeDoPorVonSemV: if the current semaphore is in the V state
-JNZRI R21 9 ;253 ok, the current semaphore is in P , now, jump to $maybeDoVonSemP: if the current semop code is V()
-SETRI R16 0        ;254 actually the current semop is P(), (and the current semaphore is in P) so we cannot do anything , we return with 0 in R16 
-SETRI R17 1        ;255 the stack frame width -- we know its only 1
-RETSB R17          ;256 for any RETSB we need the R17=1 for the stack frame width
-JZROI R13 2 ;257=$maybeDoPorVonSemV: jump to $nextsem if we only need to examine and not also do it
-JNZRI R21 1 ;258 jump to $nextsem: if the current semop code is V(), because V() on a semaphore in state V is a no-op
-STMEM R18 R16      ;259 ok, do P() on the semaphore (which was in state V) -- R18 had the address of the current semaphore 
-SUBRG R17 R17 R16  ;260=$nextsem: decrement semaphore loop counter
-JNZRI R17 -18 ;261 jump to $procsemtop: if we have more semaphores to examine and perphaps operate upon
-RETSB R16          ;262 we are all done, we return with 1 in R16 (and use the fact that the stack frame width is also 1)
-JZROI R13 -4 ;263=$maybeDoVonSemP: actually jump to $nextsem if we only need to examine and not also do it
-STMEM R18 R27      ;264 ok, do V() on the semaphore (which was in state P) -- R18 had the address of the current semaphore 
-JMTOI -6     ;265 jump to $nextsem:
+SETRG R13 R3       ;223 save the number of process cuz we need it again after $procAndSchedSeqSetup
+SETRI R8 20        ;224 address to save the number of processes
+STMEM R8 R3        ;225 saving the number of processes
+ADDRG R9 R8 R0     ;226 offset for the semwaitlists
+SETRI R10 201      ;227 the start of the proc sem waitlists address vect, one for each proc, (count,(semId,semOp),(semId,semOp),...)
+ADDRG R7 R10 R8    ;228 the first such address 
+SETRI R4 501       ;229 address where to write the # of items to generate
+STMEM R4 R3        ;230 store the # of items to generate at addr 501
+ADDRG R4 R4 R0     ;231 increment addr, R4 now contains the addr where to write the min value
+SETRI R5 0         ;232 the min value
+STMEM R4 R5        ;233 store the min value (0) at addr 502
+ADDRG R4 R4 R0     ;234 increment addr, R4 now contains the addr where to write the max value
+SETRG R5 R3        ;235 the max value is nb_proc cuz we want the offset of the seq to switch with seq[0]
+STMEM R4 R5        ;236 store the max value at addr 503
+SETRI R6 600       ;237 the start of the scheduler's sequence address vect
+ADDRG R6 R6 R3     ;238 R6 now contains the start address where to write the random-generated items (in kernel mem)
+ADDRG R4 R4 R0     ;239 increment addr, R4 now contains the addr of the start addr where to write the random-generated items
+STMEM R4 R6        ;240 store the start addr where to write the items (i.e write 600 - nb_proc at addr 504)
+SETRI R4 500       ;241 code to trigger the generation
+STMEM R4 R4        ;242 trigger the generation -- second parameter is ignored
+SETRI R4 599       ;243 the start of the scheduler's sequence address vect - 1 (hope there's at least one)
+ADDRG R4 R4 R3     ;244 now R4 is the end of the scheduler's sequence address vect, cuz we store the pids backward
+STMEM R1 R2        ;245=$procAndSchedSeqSetup: set initial process state value to current slot
+ADDRG R1 R1 R0     ;246 advance address for process table slot
+STMEM R10 R7       ;247 setting the start address for the current proc sem waitlists in the master proc sem waitlists address vect
+ADDRG R7 R7 R9     ;248 increment the start address with the right offset
+ADDRG R10 R10 R0   ;249 advance address in the master proc sem waitlists address vect
+STMEM R4 R3        ;250 store the current <maxpid - pid> in the sequence
+SUBRG R4 R4 R0     ;251 decrement the addr where to store the current pid, so it is filled backward
+SUBRG R3 R3 R0     ;252 decrement loop counter
+JNZRI R3 -9 ;253 jump back to $procSetup: for max number processes
+ADDRG R4 R4 R0     ;254 R4 is now 600, the start addr of the seq
+SETRG R6 R4        ;255 store the addr of the first item in the seq (the one to be swapped w/ a random item in the seq)
+ADDRG R4 R4 R13    ;256 R4 is now the start addr of the random-generated list
+SETRI R2 0         ;257 also count of swapped items
+LDMEM R4 R7        ;258=$swapRandom: get the random number, it's the offset in the pid seq to swap with the first item of the seq
+ADDRG R9 R6 R7     ;259 store the addr of the item to swap
+LDMEM R9 R10       ;260 get the item to be swapped in R10
+LDMEM R6 R11       ;261 get the first item of the seq in R11
+SETRG R12 R10      ;262 tmp item, contains R10
+SETRG R10 R11      ;263 put R11 in R10
+SETRG R11 R12      ;264 put R12 (R10) in R11
+STMEM R6 R11       ;265 now store the first item of the seq in random pos
+STMEM R9 R10       ;266 and store the item get at random pos in first pos
+ADDRG R4 R4 R0     ;267 increment the addr in the random-generated list
+ADDRG R2 R2 R0     ;268 increment the counter
+SUBRG R1 R13 R2    ;269 prepare R1 to tell us if we are done
+JNZRI R1 -13 ;270 jump to $swapRandom if we still have some items to swap
+SETRI R0 0         ;271 address where current scheduled proc id is stored
+SETRI R1 0         ;272 pid 0
+STMEM R0 R1        ;273 just to initialize the state of the system for int1 
+JMBSI 1        ;274 absolute jump to $int1: to start the work    , @@end of initial kernel setup@@
+SDOWN              ;275=$crash: 
+SETRI R20 0        ;276 the V() semop value (and V state value)
+SETRI R16 1        ;277=$semoptest: can we indeed P() each sem we were waiting for ? (the V()'s will go through anyway)
+LDMEM R14 R22      ;278 R22 now contains the address where the current proc semwaitlist really starts
+LDMEM R22 R17      ;279 R17 contains the number of semops requested by the current proc (whatever that proc is)
+ADDRG R22 R22 R16  ;280=$procsemtop: R22 contains the address of the current semaphore index
+LDMEM R22 R18      ;281 R18 contains the current semaphore index
+ADDRG R18 R18 R15  ;282 R18 now contains the address of the current semaphore
+LDMEM R18 R19      ;283 R19 contains the state value of the current semaphore
+SUBRG R19 R19 R16  ;284 prepare the test whether the current semaphore is in the P state (then R19 is going to be zero)
+ADDRG R22 R22 R16  ;285 R22 now contains the address of the current semop 
+LDMEM R22 R21      ;286 R21 now contains the semop code for the current semaphore
+SUBRG R21 R21 R16  ;287 prepare the test whether the current semop code is P() (then R21 is going to be zero)
+JNZRI R19 4 ;288 jump to $maybeDoPorVonSemV: if the current semaphore is in the V state
+JNZRI R21 9 ;289 ok, the current semaphore is in P , now, jump to $maybeDoVonSemP: if the current semop code is V()
+SETRI R16 0        ;290 actually the current semop is P(), (and the current semaphore is in P) so we cannot do anything , we return with 0 in R16 
+SETRI R17 1        ;291 the stack frame width -- we know its only 1
+RETSB R17          ;292 for any RETSB we need the R17=1 for the stack frame width
+JZROI R13 2 ;293=$maybeDoPorVonSemV: jump to $nextsem if we only need to examine and not also do it
+JNZRI R21 1 ;294 jump to $nextsem: if the current semop code is V(), because V() on a semaphore in state V is a no-op
+STMEM R18 R16      ;295 ok, do P() on the semaphore (which was in state V) -- R18 had the address of the current semaphore 
+SUBRG R17 R17 R16  ;296=$nextsem: decrement semaphore loop counter
+JNZRI R17 -18 ;297 jump to $procsemtop: if we have more semaphores to examine and perphaps operate upon
+RETSB R16          ;298 we are all done, we return with 1 in R16 (and use the fact that the stack frame width is also 1)
+JZROI R13 -4 ;299=$maybeDoVonSemP: actually jump to $nextsem if we only need to examine and not also do it
+STMEM R18 R27      ;300 ok, do V() on the semaphore (which was in state P) -- R18 had the address of the current semaphore 
+JMTOI -6     ;301 jump to $nextsem:
