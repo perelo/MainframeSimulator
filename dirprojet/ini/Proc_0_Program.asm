@@ -3,20 +3,70 @@ JMBSI $prep        ;LNR  absolute jump to $prep: to prepare the memory structure
 SETRI R1 0         ;LNR=$int1: address where the current proc id is stored
 LDMEM R1 R0        ;LNR get the last scheduled process id, to start from right after it (round robin)
 SETRI R2 1         ;LNR the increment for process table slots
-ADDRG R0 R0 R2     ;LNR the next process id to study, or one past the last (then we are going to wrap around)
 SETRI R11 20       ;LNR the address where the number of processes is stored
 LDMEM R11 R1       ;LNR R1 now contains the number of processes
 SETRG R9 R1        ;LNR save R1 into R9, so R9 now also contains the number of processes -- constant
-ADDRG R9 R9 R2     ;LNR actually make R9 one larger because proc id are from 1 to R1 , R9 is constant, needed for the wrap around test
+ADDRG R9 R9 R2     ;LNR actually make R9 one larger because proc id are from 1 to R1
+SETRI R17 49       ;LNR start addr-1 of the random sequence of pids
+ADDRG R17 R17 R1   ;LNR addr of the end of the random sequence of pids
+STMEM R17 R0       ;LNR store the last scheduled pid at the end of the random sequence of pids
+SETRI R17 50       ;LNR start addr of the random sequence of pids
+SETRI R18 1        ;LNR first pid to write at the start of the sequence of pids to be randomized
+SUBRG R20 R18 R9   ;LNR=$writePidInSeqLoop: prepare R20 to tell us if we are done writing the pids in the sequence
+JZROI R20 $endPidInSeqLoop ;LNR jump to $endPidInSeqLoop if we are done
+SUBRG R19 R18 R0   ;LNR prepare R19 to tell us if we are about to write the last scheduled pid
+JNZRI R19 $writePidInSeq ;LNR jump to $writePidInSeq if it's false
+ADDRG R18 R18 R2   ;LNR increment current pid to write in the sequence
+JMBSI $writePidInSeqLoop ;LNR loop to $writePidInSeqLoop after inrement R17
+STMEM R17 R18      ;LNR=$writePidInSeq: actually write the pid in the seq
+ADDRG R17 R17 R2   ;LNR increment current addr of the sequence
+ADDRG R18 R18 R2   ;LNR increment current pid to write in the sequence
+JMBSI $writePidInSeqLoop ;LNR loop to write the other pids in the seq
+JZROI R0 $endSwapRdmLoop ;LNR=$endPidInSeqLoop: don't randomize the previously written sequence if it's the kernel has just started
+SETRI R21 501      ;LNR address where to write the # of items to generate
+SETRG R22 R1       ;LNR save R1 into R21 : we'll generate max_proc -1 random items to randomize the sequence
+SUBRG R22 R22 R2   ;LNR because it's max_proc -1 and not max_proc
+STMEM R21 R22      ;LNR store the # of items to generate at addr 501
+ADDRG R21 R21 R2   ;LNR increment addr, R21 now contains the addr where to write the min value
+SETRI R23 0        ;LNR the min value
+STMEM R21 R23      ;LNR store the min value (0) at addr 502
+ADDRG R21 R21 R2   ;LNR increment addr, R21 now contains the addr where to write the max value
+SETRG R23 R22      ;LNR the max value is be max_proc-1 cuz we want the offset of the seq to switch with seq[0] to seq[max_proc-1]
+STMEM R21 R23      ;LNR store the max value at addr 503
+ADDRG R21 R21 R2   ;LNR increment addr, R21 now contains the addr where to write the addr where to write the random-generated items
+ADDRG R17 R17 R2   ;LNR R17 now contains the start addr where to write the items
+STMEM R21 R17      ;LNR store the start addr where to write the items (R17 contains 50 + max_proc)
+SETRI R21 500      ;LNR code to trigger the generation
+STMEM R21 R21      ;LNR trigger the generation -- second parameter is ignored
+SETRI R21 50       ;LNR the start addr of the seq, constant
+SETRG R24 R21      ;LNR store the addr of the first item in the seq (the one to be swapped w/ a random item in the seq)
+SETRI R25 0        ;LNR count of swapped items
+SETRG R31 R22      ;LNR save R22 (max_proc - 1), it's the number of items to write
+LDMEM R17 R27      ;LNR=$swapRandom: get the random number, it's the offset in the pid seq to swap with the first item of the seq
+ADDRG R22 R21 R27  ;LNR store the addr of the item to swap
+LDMEM R22 R28      ;LNR get the item to be swapped in R28
+LDMEM R21 R29      ;LNR get the first item of the seq in R29
+SETRG R30 R28      ;LNR tmp item, contains R28
+SETRG R28 R29      ;LNR put R29 in R28
+SETRG R29 R30      ;LNR put R30 (R28) in R29
+STMEM R22 R28      ;LNR now store the first item of the seq in random pos
+STMEM R21 R29      ;LNR and store the item get at random pos in first pos
+ADDRG R17 R17 R2   ;LNR increment the addr in the random-generated list
+ADDRG R25 R25 R2   ;LNR increment the counter
+SUBRG R26 R25 R31  ;LNR prepare R1 to tell us if we are done (counter - max_proc-1 == 0)
+JNZRI R26 $swapRandom ;LNR=$endSwapRdmLoop: jump to $swapRandom if we still have some items to swap
 SETRI R3 1         ;LNR the ReadyToRun process state value (proc states: 0(exit), 1(ready), 2(running), 3(semwait), 4(netwait)...)
 SETRI R4 3         ;LNR the SemWait process state value (proc states: 0(exit), 1(ready), 2(running), 3(semwait), 4(netwait)...)
 SETRI R15 100      ;LNR the start address of the semaphore vector (where we keep the semaphore state values)
 SETRI R6 0         ;LNR for now 'no', we did not find any non-exited process yet    
-SETRG R7 R0        ;LNR=$top: copy R0 for the test for the wrap around
-SUBRG R7 R7 R9     ;LNR prepare the test for R0 wrap around
-JNZRI R7 $nextPid  ;LNR if R7 (that is R0) is not equal to R9 (the number of processes) we can continue
-SETRI R0 1         ;LNR otherwise, we need to set R0 to 1 to wrap around (pid zero is for the kernel)
-SETRG R10 R11      ;LNR=$nextPid: prepare the offset for the process table start address
+SETRI R32 50       ;LNR start addr of the seq, to add to R9 for the wrap around
+ADDRG R9 R9 R32    ;LNR R9 now contains the last addr of the seq +1
+SETRG R7 R32       ;LNR=$top: copy R32 for the test for the wrap around
+SUBRG R7 R7 R9     ;LNR prepare the test for R32 wrap around
+JNZRI R7 $nextPid  ;LNR if R7 (that is R32) is not equal to R9 (the number of processes) we can continue
+SETRI R32 50       ;LNR otherwise, we need to set R10 to 50 to wrap around
+LDMEM R32 R0       ;LNR=$nextPid: R0 is now a random process, the one we want to elect
+SETRG R10 R11      ;LNR prepare the offset for the process table start address
 ADDRG R10 R10 R0   ;LNR now R10 contains the address of the current process slot in the process table
 SETRI R14 200      ;LNR the start of the proc sem waitlists address vect, one list for each proc, (count,(semId,semOp),(semId,semOp),...)
 ADDRG R14 R14 R0   ;LNR the address of the start of the proc sem waitlists address vect for the current process
@@ -39,7 +89,7 @@ SETRI R16 $semoptest ;LNR the address of the start of the $semoptest sub
 CLLSB R5 R16       ;LNR call to $semoptest(R13=1, R14=current proc semlist address, R15=semvect addr)
 JZROI R16 $crash   ;LNR this should never ever happen
 JMTOI $startproc   ;LNR jump to $startproc: we are now done with all the semaphore operations, and can complete the election of process of pid R0
-ADDRG R0 R0 R2     ;LNR=$nextproc: increment the pid for the next process to study 
+ADDRG R32 R32 R2   ;LNR=$nextproc: increment the address in the pid-seq for the next process to study 
 SUBRG R1 R1 R2     ;LNR decrement loop counter
 JNZRI R1  $top     ;LNR jump to $top: loop for max number processes
 JNZRI R6 $wait     ;LNR no ready proc but at least one not exited, so we go to $wait: 
