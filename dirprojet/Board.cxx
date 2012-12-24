@@ -345,7 +345,7 @@ void BaseCPU::pendingIntIfAny() throw(CExc) {
 }
 
 void BaseCPU::run() throw(CExc) {
-    for(iTick = uTick = 0; qRun && iTick < 10000; uTick += (mdReg . getVal() != 1),iTick++) {
+    for(iTick = uTick = 0; qRun && iTick < 40000; uTick += (mdReg . getVal() != 1),iTick++) {
         execute(pcReg . fetch(proc[prReg . getVal()] . programText));
         if(qInterruptible) {
             pendingIntIfAny();
